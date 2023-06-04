@@ -1,0 +1,5 @@
+setup.py
+DatasetTools.egg-info/PKG-INFO
+DatasetTools.egg-info/SOURCES.txt
+DatasetTools.egg-info/dependency_links.txt
+DatasetTools.egg-info/top_level.txt
