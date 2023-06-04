@@ -10,6 +10,7 @@ cfg = OmegaConf.create()
 
 # ======= DATASET ==============================================================
 cfg.DATASET = OmegaConf.create()
+cfg.DATASET.PARSER: str = None
 cfg.DATASET.META = OmegaConf.create()
 cfg.DATASET.LABELS: Dict[int, str] = {}
 cfg.DATASET.ANNOTATIONS_PATH: str = None

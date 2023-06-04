@@ -4,10 +4,8 @@ from  omegaconf import OmegaConf
 
 from DatasetTools.Config.config import get_cfg
 from DatasetTools.Datasets import data_parsers
+from DatasetTools.Tasks import tasks
 
-TOOLS = {
-
-}
 
 
 def parse_args():
@@ -37,15 +35,20 @@ def parse_args():
         "--images",
         help="Path to the images",
     )
-    # TODO: Task
-    # TODO: --opts
+    sub_parser = ap.add_subparsers(
+        title="task",
+        dest="task",
+        required=True
+    )
+    for t in tasks.values():
+        t.add_sub_parser(sub_parser)
 
     args = ap.parse_args()
-    
+
     if args.cfg is not None:
         cfg = OmegaConf.merge(cfg, OmegaConf.load(args.cfg))
 
-    # TODO: add opts to cfg
+    cfg.DATASET.PARSER = args.parser
 
     if args.annotations is not None:
         cfg.DATASET.ANNOTATIONS_PATH = args.annotations
@@ -53,20 +56,14 @@ def parse_args():
     if args.images is not None:
         cfg.DATASET.IMAGES_PATH = args.images
 
-    parser = data_parsers[args.parser](cfg)
+    # TODO: add opts to cfg
+
+    parser = data_parsers[cfg.DATASET.PARSER](cfg)
     parser.load()
+
+    task = tasks[args.task].from_args(args, cfg)
+    task.run(parser)
 
 
 if __name__ == "__main__":
     parse_args()
-
-
-
-
-# parser = coco_parser.COCODataset()
-# parser.parse(
-#     "C:/Users/HE7/Desktop/annotations_trainval2017/annotations/instances_val2017.json",
-#     "C:/a/b/c"
-# )
-# images = parser.images()
-# print(images[0])

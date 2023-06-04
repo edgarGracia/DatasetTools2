@@ -1,3 +1,4 @@
+import argparse
 import functools
 import logging
 from enum import Enum, unique
@@ -59,3 +60,12 @@ def get_logger(
     logger.addHandler(ch)
     logger.propagate = False
     return logger
+
+
+def add_opts_arg(ap: argparse.ArgumentParser):
+    ap.add_argument(
+        "--opts",
+        help="Modify the configuration",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )

@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from typing import List, Optional
-import argparse
 
 from omegaconf import DictConfig
 
@@ -14,14 +13,12 @@ from DatasetTools.Structures.instance import Instance
 from DatasetTools.Structures.mask import Mask
 from DatasetTools.utils.utils import get_logger
 
+from .base_parser import BaseParser
+
 logger = get_logger(module_name="COCODataset")
 
 
-class COCODataset:
-
-    def __init__(self, cfg: Optional[DictConfig] = None):
-        self.cfg = get_cfg() if cfg is None else cfg
-        self._images: List[Image] = []
+class COCODataset(BaseParser):
 
     def load(self):
         """Parse a COCO dataset.
@@ -125,8 +122,3 @@ class COCODataset:
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "
                            f"annotation: {[i.id for i in non_annot]}")
-
-    def images(self) -> List[Image]:
-        """Get a list with the images of the dataset
-        """
-        return self._images
