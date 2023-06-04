@@ -23,18 +23,15 @@ class COCODataset:
         self.cfg = get_cfg() if cfg is None else cfg
         self._images: List[Image] = []
 
-    def load(self, annotations_file: str, images_path: Optional[str] = None):
+    def load(self):
         """Parse a COCO dataset.
-
-        Args:
-            annotations_file (Path): Path to the annotations JSON file.
-            images_path (Optional[Path], optional): Path to the root images
-                directory. Defaults to None.
         """
-        self.cfg.DATASET.ANNOTATIONS_PATH = annotations_file
-        self.cfg.DATASET.IMAGES_PATH = images_path
-        annotations_file = Path(annotations_file)
-        images_path = Path(images_path) if images_path is not None else None
+        # Get paths
+        annotations_file = Path(self.cfg.DATASET.ANNOTATIONS_PATH)
+        if self.cfg.DATASET.IMAGES_PATH:
+            images_path = Path(self.cfg.DATASET.IMAGES_PATH)
+        else:
+            images_path = None
 
         # Load dataset
         data = json.loads(annotations_file.read_text())
@@ -133,49 +130,3 @@ class COCODataset:
         """Get a list with the images of the dataset
         """
         return self._images
-
-    @classmethod
-    def set_argument_parser(
-        cls,
-        parser: argparse.ArgumentParser
-    ) -> argparse.ArgumentParser:
-        """Add a child argument parser to a parent one.
-
-        Args:
-            parser (argparse.ArgumentParser): Parent argument parser.
-
-        Returns:
-            argparse.ArgumentParser: The created child parser.
-        """
-        sub_ap = parser.add_parser(
-            cls.__name__,
-            help="Load a COCO dataset"
-        )
-        sub_ap.add_argument(
-            "-a",
-            "--annotations",
-            dest=f"_parser.{cls.__name__}.annotations_file",
-            help="Path to the annotations JSON file",
-            required = True
-        )
-        sub_ap.add_argument(
-            "-i",
-            "--images",
-            dest=f"_parser.{cls.__name__}.images_path",
-            help="Path to the root images directory"
-        )
-        return sub_ap
-
-    def parse_args(self, args: argparse.Namespace):
-        """Load the dataset from the parsed arguments.
-
-        Args:
-            args (argparse.Namespace): The parsed arguments.
-        """
-        args = vars(args)
-        self.load(
-            annotations_file=args[
-                f"_parser.{self.__class__.__name__}.annotations_file"],
-            images_path=args[
-                f"_parser.{self.__class__.__name__}.images_path"]
-        )
