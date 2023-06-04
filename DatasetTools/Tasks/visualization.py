@@ -5,12 +5,14 @@ from typing import Optional, Type
 from pathlib import Path
 import matplotlib.pyplot as plt
 import cv2
+import numpy as np
 
 from omegaconf import DictConfig
 
 from DatasetTools.utils.utils import add_opts_arg
 from DatasetTools.Config.config import get_cfg
 from DatasetTools.Datasets.base_parser import BaseParser
+from DatasetTools.Visualization.draw import draw_image_annotations
 
 
 class Visualization:
@@ -31,17 +33,30 @@ class Visualization:
         images = parser.images()
 
         for image in images:
-            # TODO: Call visualization method
-            # np_img = cv2.imread(str(image.path))
-            # plt.imshow(np_img)
-            # plt.show()
+            vis_image = draw_image_annotations(image, self.cfg)
             if self.show:
-                # TODO
-                pass
+                self._show(vis_image)
             if self.output is not None:
                 # TODO: check input != output
                 pass
     
+    def _show(self, image: np.ndarray):
+        if self.show_lib == "matplotlib":
+            self._show_plt(image)
+        elif self.show_lib == "cv2":
+            self._show_cv2(image)
+        else:
+            raise NotImplementedError
+
+    def _show_plt(self, image: np.ndarray):
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        plt.imshow(rgb)
+        plt.show()
+
+    def _show_cv2(self, image: np.ndarray):
+        cv2.imshow(self.__class__.__name__, image)
+        cv2.waitKey(0)
+
     @classmethod
     def add_sub_parser(cls, parent_parser: argparse.ArgumentParser):
         ap = parent_parser.add_parser(

@@ -1,10 +1,6 @@
 import json
 from pathlib import Path
-from typing import List, Optional
 
-from omegaconf import DictConfig
-
-from DatasetTools.Config.config import get_cfg
 from DatasetTools.Structures.bounding_box import (BoundingBox,
                                                   BoundingBoxFormat,
                                                   CoordinatesType)
@@ -68,7 +64,7 @@ class COCODataset(BaseParser):
             )
             if image_data["id"] in images:
                 logger.error(f"Duplicated image ID: {image_data['id']}")
-            
+
             images[image_data["id"]] = image
 
         # Parse annotations
@@ -117,7 +113,7 @@ class COCODataset(BaseParser):
                                f"annotation: {annot['id']}")
 
         self._images = list(images.values())
-        
+
         non_annot = [i for i in self._images if not i.annotations]
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "

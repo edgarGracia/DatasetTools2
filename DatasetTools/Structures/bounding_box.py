@@ -68,16 +68,15 @@ class BoundingBox:
         Returns:
             np.ndarray: The cropped area of the image.
         """
-        box = self.to(
+        xmin, ymin, xmax, ymax = self.to(
             format=BoundingBoxFormat.XYXY,
             coords_type=CoordinatesType.ABSOLUTE,
             image_width=image.shape[1],
             image_height=image.shape[0]
-        )
-        xmin, ymin, xmax, ymax = box.to_numpy()
+        ).numpy().astype(int)
         return image[xmin:xmax, ymin:ymax]
 
-    def to_numpy(self) -> np.ndarray:
+    def numpy(self) -> np.ndarray:
         """Return the bounding box coordinates as a numpy array.
 
         Returns:
@@ -219,3 +218,9 @@ class BoundingBox:
             if image_height is not None and box.y2 >= image_height:
                 return False
         return True
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(x1={self.x1}, y1={self.y1}, x2={self.x2}, y2={self.y2})"

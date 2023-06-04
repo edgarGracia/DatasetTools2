@@ -9,10 +9,11 @@ import seaborn as sns
 from DatasetTools.Config.config import get_cfg, update_copy
 from DatasetTools.utils.utils import ColorSource, RelativePosition
 from DatasetTools.Structures.instance import Instance
+from DatasetTools.Structures.image import Image
 from DatasetTools.Structures.bounding_box import (BoundingBoxFormat,
                                                   BoundingBox, CoordinatesType)
 
-FONT = cv2.FONT_HERSHEY_SIMPLEX
+CV2_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def get_color(
@@ -65,77 +66,65 @@ def get_color(
     
 
 def draw_text(
-    text: str,
     image: np.ndarray,
+    text: Union[str, List[str]],
     position: Tuple[int, int],
-    instance: Optional[Instance] = None,
-    cfg: Optional[DictConfig] = None,
-    **kwargs
+    color: Tuple[int, int, int] = (255,255,255),
+    scale: int = 1,
+    thickness: int = 1,
+    line_space: int = 15,
+    relative_position: RelativePosition = RelativePosition.TOP_LEFT,
+    background: bool = True,
+    background_color: Tuple[int, int, int] = (50,50,50),
+    background_alpha: float = 1,
+    background_margin: int = 0
 ) -> np.ndarray:
-    """Draw a text in an image.
+    """Draw text in an image.
 
-    Args:
-        text (str): The text to draw.
-        image (np.ndarray): Numpy image of shape (H, W, 3) and ``uint8`` dtype.
-        position (Tuple[int, int]) Text position.
-        instance (Optional[Instance], optional): Optional instance used to
-            select the color. Default to None.
-        cfg (Optional[DictConfig], optional): A configuration object.
-            If None, the default will be used. Defaults to None.
-        **kwargs: cfg values to override.
-
+    TODO
+    
     Raises:
         NotImplementedError
 
     Returns:
         np.ndarray: The image with the text drawn.
     """
-    if not text or not cfg.VIS.TEXT.VISIBLE:
+    if not text:
         return image
+    
+    text_lines = text.splitlines() if isinstance(text, str) else text
+    max_text_len = max(text_lines, key=lambda x: len(x))
 
-    if cfg is None:
-        cfg = get_cfg()
-
-    if kwargs:
-        cfg = update_copy(cfg, kwargs)
-
-    lines = text.splitlines()
-    max_text_len = max(lines, key=lambda x: len(x))
     (text_w, text_h), _ = cv2.getTextSize(
         max_text_len,
-        FONT,
-        cfg.VIS.TEXT.SCALE,
-        cfg.VIS.TEXT.THICKNESS
+        CV2_FONT,
+        scale,
+        thickness
     )
 
-    if cfg.VIS.TEXT.POSITION is RelativePosition.TOP_RIGHT:
+    if relative_position is RelativePosition.TOP_LEFT:
         x, y = position
     else:
         raise NotImplementedError
 
-    if cfg.VIS.TEXT_BG.VISIBLE:
-        bg_color = get_color(
-            cfg.VIS.TEXT_BG.COLOR_SOURCE,
-            cfg.VIS.TEXT_BG.COLOR,
-            cfg.VIS.TEXT_BG.PALETTE,
-            instance
-        )
+    if background and background_alpha > 0:
+        box_h = (text_h + (scale * line_space)) * (len(text_lines)-1)
+        xmin = max(0, x - background_margin)
+        ymin = max(0, y - text_h - background_margin)
+        xmax = min(image.shape[1], x + text_w + background_margin)
+        ymax = min(image.shape[0], y + box_h + background_margin)
 
-        box_h = (text_h + (cfg.VIS.TEXT.SCALE *
-                 cfg.VIS.TEXT.LINE_SPACE)) * (len(lines)-1)
-
-        xmin = max(0, x - cfg.VIS.TEXT_BG.MARGIN)
-        ymin = max(0, y - text_h - cfg.VIS.TEXT_BG.MARGIN)
-        xmax = min(image.shape[1], x + text_w + cfg.VIS.TEXT_BG.MARGIN)
-        ymax = min(image.shape[0], y + box_h + cfg.VIS.TEXT_BG.MARGIN)
-
-        if cfg.VIS.TEXT_BG.ALPHA < 1:
-            bg = np.full((ymax-ymin, xmax-xmin, 3), bg_color, dtype="uint8")
+        if background_alpha < 1:
+            bg = np.full(
+                (ymax-ymin, xmax-xmin, 3),
+                background_color,
+                dtype="uint8"
+            )
             image[ymin:ymax, xmin:xmax, :] = cv2.addWeighted(
                 image[ymin:ymax, xmin:xmax, :],
-                1-cfg.VIS.TEXT_BG.ALPHA,
+                1-background_alpha,
                 bg,
-                cfg.VIS.TEXT_BG.ALPHA,
+                background_alpha,
                 0
             )
         else:
@@ -143,111 +132,237 @@ def draw_text(
                 image,
                 (xmin, ymin),
                 (xmax, ymax),
-                bg_color,
+                background_alpha,
                 -1
             )
 
-    text_color = get_color(
-        cfg.VIS.TEXT.COLOR_SOURCE,
-        cfg.VIS.TEXT.COLOR,
-        cfg.VIS.TEXT.PALETTE,
-        instance
-    )
-    for i, line in enumerate(lines):
-        dy = i * (text_h + cfg.VIS.TEXT.SCALE * cfg.VIS.TEXT.LINE_SPACE)
+    for i, line in enumerate(text_lines):
+        dy = i * (text_h + scale * line_space)
         cv2.putText(
             image,
             line,
             (x, y+dy),
-            FONT,
-            cfg.VIS.TEXT.SCALE,
-            text_color,
-            cfg.VIS.TEXT.THICKNESS,
+            CV2_FONT,
+            scale,
+            color,
+            thickness,
             cv2.LINE_AA
         )
+
     return image
 
 
-def draw_bounding_box(
-    box: BoundingBox,
-    image: np.ndarray,
-    instance: Optional[Instance] = None,
-    text: Optional[str] = None,
-    cfg: Optional[DictConfig] = None,
-    **kwargs
-) -> np.ndarray:
-    """Draw a bonding box with an optional text on an image.
+# def draw_text(
+#     text: str,
+#     image: np.ndarray,
+#     position: Tuple[int, int],
+#     instance: Optional[Instance] = None,
+#     cfg: Optional[DictConfig] = None,
+#     **kwargs
+# ) -> np.ndarray:
+#     """Draw a text in an image.
 
-    Args:
-        box (BoundingBox): A bounding box object.
-        image (np.ndarray): An image.
-        instance (Optional[Instance], optional): Optional instance used to
-            select the color. Default to None.. Defaults to None.
-        text (Optional[str], optional): Optional text. Defaults to None.
-        cfg (Optional[DictConfig], optional): A configuration object.
-            If None, the default will be used. Defaults to None.
-        **kwargs: cfg values to override.
+#     Args:
+#         text (str): The text to draw.
+#         image (np.ndarray): Numpy image of shape (H, W, 3) and ``uint8`` dtype.
+#         position (Tuple[int, int]) Text position.
+#         instance (Optional[Instance], optional): Optional instance used to
+#             select the color. Default to None.
+#         cfg (Optional[DictConfig], optional): A configuration object.
+#             If None, the default will be used. Defaults to None.
+#         **kwargs: cfg values to override.
+
+#     Raises:
+#         NotImplementedError
+
+#     Returns:
+#         np.ndarray: The image with the text drawn.
+#     """
+#     if not text:
+#         return image
+
+#     if cfg is None:
+#         cfg = get_cfg()
+
+#     if kwargs:
+#         cfg = update_copy(cfg, kwargs)
+
+#     lines = text.splitlines()
+#     max_text_len = max(lines, key=lambda x: len(x))
+#     (text_w, text_h), _ = cv2.getTextSize(
+#         max_text_len,
+#         FONT,
+#         cfg.VIS.TEXT.SCALE,
+#         cfg.VIS.TEXT.THICKNESS
+#     )
+
+#     if cfg.VIS.TEXT.POSITION is RelativePosition.TOP_RIGHT:
+#         x, y = position
+#     else:
+#         raise NotImplementedError
+
+#     if cfg.VIS.TEXT_BG.VISIBLE:
+#         bg_color = get_color(
+#             cfg.VIS.TEXT_BG.COLOR_SOURCE,
+#             cfg.VIS.TEXT_BG.COLOR,
+#             cfg.VIS.TEXT_BG.PALETTE,
+#             instance
+#         )
+
+#         box_h = (text_h + (cfg.VIS.TEXT.SCALE *
+#                  cfg.VIS.TEXT.LINE_SPACE)) * (len(lines)-1)
+
+#         xmin = max(0, x - cfg.VIS.TEXT_BG.MARGIN)
+#         ymin = max(0, y - text_h - cfg.VIS.TEXT_BG.MARGIN)
+#         xmax = min(image.shape[1], x + text_w + cfg.VIS.TEXT_BG.MARGIN)
+#         ymax = min(image.shape[0], y + box_h + cfg.VIS.TEXT_BG.MARGIN)
+
+#         if cfg.VIS.TEXT_BG.ALPHA < 1:
+#             bg = np.full((ymax-ymin, xmax-xmin, 3), bg_color, dtype="uint8")
+#             image[ymin:ymax, xmin:xmax, :] = cv2.addWeighted(
+#                 image[ymin:ymax, xmin:xmax, :],
+#                 1-cfg.VIS.TEXT_BG.ALPHA,
+#                 bg,
+#                 cfg.VIS.TEXT_BG.ALPHA,
+#                 0
+#             )
+#         else:
+#             cv2.rectangle(
+#                 image,
+#                 (xmin, ymin),
+#                 (xmax, ymax),
+#                 bg_color,
+#                 -1
+#             )
+
+#     text_color = get_color(
+#         cfg.VIS.TEXT.COLOR_SOURCE,
+#         cfg.VIS.TEXT.COLOR,
+#         cfg.VIS.TEXT.PALETTE,
+#         instance
+#     )
+#     for i, line in enumerate(lines):
+#         dy = i * (text_h + cfg.VIS.TEXT.SCALE * cfg.VIS.TEXT.LINE_SPACE)
+#         cv2.putText(
+#             image,
+#             line,
+#             (x, y+dy),
+#             FONT,
+#             cfg.VIS.TEXT.SCALE,
+#             text_color,
+#             cfg.VIS.TEXT.THICKNESS,
+#             cv2.LINE_AA
+#         )
+#     return image
+
+
+def draw_bounding_box(
+    image: np.ndarray,
+    bounding_box: BoundingBox,
+    color: Tuple[int, int, int] = (255,255,255),
+    alpha: float = 1,
+    thickness: int = 1,
+    fill: bool = False,
+) -> np.ndarray:
+    """Draw a bounding box in an image.
+
+    TODO
 
     Raises:
         NotImplementedError
 
     Returns:
-        np.ndarray: The image with the bounding box and text drawn.
+        np.ndarray: The image with the bounding box drawn.
     """
-
-    xmin, ymin, xmax, ymax = box.to(
+    thickness = -1 if fill else thickness
+    
+    if alpha <= 0:
+        return image
+    
+    xmin, ymin, xmax, ymax = bounding_box.to(
         BoundingBoxFormat.XYXY,
         CoordinatesType.ABSOLUTE,
         image_width=image.shape[1],
         image_height=image.shape[0]
-    )
-    
-    if cfg.VIS.BOX.VISIBLE:
-        box_color = get_color(
-            cfg.VIS.BOX.COLOR_SOURCE,
-            cfg.VIS.BOX.COLOR,
-            cfg.VIS.BOX.PALETTE,
-            instance
-        )
-        box_thickness = cfg.VIS.BOX.THICKNESS if not cfg.VIS.BOX.FILL else -1
-        if cfg.VIS.BOX.ALPHA < 1:
-            box_mask = cv2.rectangle(
-                np.zeros_like(image),
-                (xmin, ymin),
-                (xmax, ymax),
-                (1,1,1),
-                box_thickness
-            )
-            color_mask = np.clip(box_mask * box_color, 0, 255).astype("uint8")
-            image[box_mask==1] = cv2.addWeighted(
-                image[box_mask==1],
-                1-cfg.VIS.BOX.ALPHA,
-                color_mask[box_mask==1],
-                cfg.VIS.BOX.ALPHA,
-                0
-            )[:,0]
-        else:
-            image = cv2.rectangle(
-                image,
-                (xmin, ymin),
-                (xmax, ymax),
-                box_color,
-                box_thickness
-            )
+    ).numpy().astype(int)
 
-    if text and cfg.VIS.TEXT.VISIBLE:
-        if cfg.VIS.BOX.TEXT_POSITION is RelativePosition.TOP_LEFT:
-            x, y = xmin, ymin
-        else:
-            raise NotImplementedError
-        image = draw_text(
-            text,
-            image,
-            (x, y),
-            instance,
-            cfg
+    if alpha < 1:
+        box_mask = cv2.rectangle(
+            np.zeros_like(image),
+            (xmin, ymin),
+            (xmax, ymax),
+            (1,1,1),
+            thickness
         )
-   
+        color_mask = np.clip(box_mask * color, 0, 255).astype("uint8")
+        image[box_mask==1] = cv2.addWeighted(
+            image[box_mask==1],
+            1-alpha,
+            color_mask[box_mask==1],
+            alpha,
+            0
+        )[:,0]
+    else:
+        image = cv2.rectangle(
+            image,
+            (xmin, ymin),
+            (xmax, ymax),
+            color,
+            thickness
+        )
+
+    return image
+
+
+def draw_instance(
+    image: np.ndarray,
+    instance: Instance,
+    cfg: Optional[DictConfig] = None,
+    **kwargs
+) -> np.ndarray:
+    """TODO
+
+    Args:
+        image (np.ndarray): _description_
+        instance (Instance): _description_
+        cfg (Optional[DictConfig], optional): _description_. Defaults to None.
+
+    Returns:
+        np.ndarray: _description_
+    """
+    if kwargs:
+        cfg = update_copy(cfg, kwargs)
+
+    if instance.bounding_box is not None and cfg.VIS.BOX.VISIBLE:
+        box_color = get_color(
+            color_source=cfg.VIS.BOX.COLOR_SOURCE,
+            color=cfg.VIS.BOX.COLOR,
+            palette=cfg.VIS.BOX.PALETTE,
+            instance=instance,
+        )
+        draw_bounding_box(
+            image=image,
+            bounding_box=instance.bounding_box,
+            color=box_color,
+            alpha=cfg.VIS.BOX.ALPHA,
+            thickness=cfg.VIS.BOX.THICKNESS,
+            fill=cfg.VIS.BOX.FILL,
+        )
+    # if 
+    
+
+def draw_image_annotations(
+    dataset_image: Image,
+    cfg: Optional[DictConfig] = None
+) -> np.ndarray:
+    image = cv2.imread(str(dataset_image.path))
+    if image is None:
+        raise ValueError(f"Image is None: {dataset_image.path}")
+    annotations = dataset_image.annotations
+
+    for annot in annotations:
+        draw_instance(image=image, instance=annot, cfg=cfg)
+    
     return image
 
 
