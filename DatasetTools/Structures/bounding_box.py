@@ -219,6 +219,33 @@ class BoundingBox:
                 return False
         return True
 
+    def resize(
+        self,
+        fx: Optional[float] = None,
+        fy: Optional[float] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        source_with: Optional[int] = None,
+        source_height: Optional[int] = None,
+        from_center: bool = False
+    ) -> BoundingBox:
+        """Resize the bounding box.
+
+        Args:
+            fx (Optional[float], optional): The width scale factor.
+                Ignored if ``width`` is set. Defaults to None.
+            fy (Optional[float], optional): The height scale factor.
+                Ignored if ``height`` is set. Defaults to None.
+            width (Optional[int], optional): The . Defaults to None.
+            height (Optional[int], optional): _description_. Defaults to None.
+            source_with (Optional[int], optional): _description_. Defaults to None.
+            source_height (Optional[int], optional): _description_. Defaults to None.
+            from_center (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            BoundingBox: _description_
+        """
+
     def __str__(self) -> str:
         return repr(self)
 

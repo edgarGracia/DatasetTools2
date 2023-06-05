@@ -2,7 +2,7 @@ import argparse
 
 from  omegaconf import OmegaConf
 
-from DatasetTools.Config.config import get_cfg
+from DatasetTools.Config.config import get_cfg, update_copy_str
 from DatasetTools.Datasets import data_parsers
 from DatasetTools.Tasks import tasks
 
@@ -56,7 +56,8 @@ def parse_args():
     if args.images is not None:
         cfg.DATASET.IMAGES_PATH = args.images
 
-    # TODO: add opts to cfg
+    if args.opts:
+        cfg = update_copy_str(cfg, args.opts)
 
     parser = data_parsers[cfg.DATASET.PARSER](cfg)
     parser.load()

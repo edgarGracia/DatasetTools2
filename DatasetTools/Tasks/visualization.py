@@ -1,21 +1,24 @@
 from __future__ import annotations
 
 import argparse
-from typing import Optional, Type
 from pathlib import Path
-import matplotlib.pyplot as plt
+from typing import Optional, Type
+
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
-
 from omegaconf import DictConfig
+from tqdm import tqdm
 
-from DatasetTools.utils.utils import add_opts_arg
 from DatasetTools.Config.config import get_cfg
 from DatasetTools.Datasets.base_parser import BaseParser
+from DatasetTools.utils.utils import add_opts_arg
 from DatasetTools.Visualization.draw import draw_image_annotations
 
+from .base_task import BaseTask
 
-class Visualization:
+
+class Visualization(BaseTask):
 
     def __init__(
         self,
@@ -32,14 +35,21 @@ class Visualization:
     def run(self, parser: Type[BaseParser]):
         images = parser.images()
 
-        for image in images:
+        for image in tqdm(images):
             vis_image = draw_image_annotations(image, self.cfg)
             if self.show:
                 self._show(vis_image)
             if self.output is not None:
-                # TODO: check input != output
-                pass
-    
+                self._save_image(vis_image, image.path)
+
+    def _save_image(self, image: np.ndarray, input_path: Path):
+        out_path = self.output / input_path.name
+        if out_path == input_path:
+            raise FileExistsError(
+                "Output image path is equal to the source image path!")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(out_path), image)
+
     def _show(self, image: np.ndarray):
         if self.show_lib == "matplotlib":
             self._show_plt(image)

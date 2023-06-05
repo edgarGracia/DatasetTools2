@@ -4,7 +4,6 @@ from omegaconf import OmegaConf
 
 from DatasetTools.utils.utils import ColorSource, RelativePosition
 
-
 cfg = OmegaConf.create()
 
 
@@ -41,7 +40,8 @@ cfg.VIS.TEXT_BG.VISIBLE: bool = True
 cfg.VIS.TEXT_BG.COLOR: Tuple[int, int, int] = (224, 56, 84)
 cfg.VIS.TEXT_BG.ALPHA: float = 0.75
 # Optional Seaborn color palette or list of colors
-cfg.VIS.TEXT_BG.PALETTE: Optional[Union[str, List[Tuple[int, int, int]]]] = None
+cfg.VIS.TEXT_BG.PALETTE: Optional[Union[str,
+                                        List[Tuple[int, int, int]]]] = None
 cfg.VIS.TEXT_BG.COLOR_SOURCE: ColorSource = ColorSource.LABEL
 cfg.VIS.TEXT_BG.MARGIN: int = 0
 

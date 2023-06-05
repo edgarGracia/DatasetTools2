@@ -350,19 +350,62 @@ def draw_instance(
         )
     # if 
     
+def resize_image(
+    image: np.ndarray,
+    width: Optional[int] = None,
+    height: Optional[int] = None
+) -> np.ndarray:
+    """Resize an image to the given width and height.
+
+    Args:
+        image (np.ndarray): The image to resize.
+        width (Optional[int], optional): Desired width.
+            If None it will resize the image with the provided ``height``,
+            maintaining the aspect ration. Defaults to None.
+        height (Optional[int], optional): Desired height.
+            If None it will resize the image with the provided ``width``,
+            maintaining the aspect ration. Defaults to None.
+
+    Returns:
+        np.ndarray: The resized image.
+    """
+    if width is None and height is None:
+        return image
+    if width is not None and height is not None:
+        return cv2.resize(image, (width, height))
+    h, w, = image.shape[:2]
+    if width is not None:
+        f = width / w
+    elif height is not None:
+        f = height / h
+    return cv2.resize(image, None, fx=f, fy=f)
+
+
 
 def draw_image_annotations(
     dataset_image: Image,
     cfg: Optional[DictConfig] = None
 ) -> np.ndarray:
+    """_summary_
+
+    Args:
+        dataset_image (Image): _description_
+        cfg (Optional[DictConfig], optional): _description_. Defaults to None.
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        np.ndarray: _description_
+    """
     image = cv2.imread(str(dataset_image.path))
     if image is None:
         raise ValueError(f"Image is None: {dataset_image.path}")
+    if cfg.VIS.IMG_WIDTH is not None or cfg.VIS.IMG_HEIGHT is not None:
+        image = resize_image(image, cfg.VIS.IMG_WIDTH, cfg.VIS.IMG_HEIGHT)
     annotations = dataset_image.annotations
-
     for annot in annotations:
         draw_instance(image=image, instance=annot, cfg=cfg)
-    
     return image
 
 

@@ -3,4 +3,5 @@ Visualize a single image?
 Run only from cfg
 Visualization no background image
 draw text alpha
-Resize images 
+Resize images
+Save cfg arg
