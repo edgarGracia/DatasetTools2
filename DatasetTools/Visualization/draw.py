@@ -263,6 +263,8 @@ def draw_bounding_box(
     alpha: float = 1,
     thickness: int = 1,
     fill: bool = False,
+    fx: Optional[float] = None,
+    fy: Optional[float] = None
 ) -> np.ndarray:
     """Draw a bounding box in an image.
 
