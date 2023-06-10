@@ -1,25 +1,12 @@
 from __future__ import annotations
 
 from enum import Enum, unique
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Type
+from copy import deepcopy
 
 import numpy as np
 
-
-@unique
-class BoundingBoxFormat(Enum):
-    """Format of the bounding box coordinates.
-    """
-    XYXY = "XYXY"
-    """xmin, ymin, xmax, ymax"""
-
-    X1Y1WH = "X1Y1WH"
-    """xmin, ymin, width, height"""
-
-    CXCYWH = "CXCYWH"
-    """center-x, center-y, width, height"""
-
-    OTHER = "OTHER"
+int_or_float = Union[int, float]
 
 
 @unique
@@ -28,249 +15,546 @@ class CoordinatesType(Enum):
     ABSOLUTE = "ABSOLUTE"
 
 
-class BoundingBox:
+class BaseBoundingBox:
+    """Base class for bounding boxes.
+    """
 
-    def __init__(
+    def __int__(
         self,
-        x1: Union[float, int],
-        y1: Union[float, int],
-        x2: Union[float, int],
-        y2: Union[float, int],
-        format: BoundingBoxFormat = BoundingBoxFormat.XYXY,
+        x1: int_or_float,
+        y1: int_or_float,
+        x2: int_or_float,
+        y2: int_or_float,
         coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
     ):
-        """Create a new BoundingBox object from two set of points.
+        raise NotImplementedError
 
-        Args:
-            x1 (Union[float, int]): First x coordinate.
-            y1 (Union[float, int]): First y coordinate.
-            x2 (Union[float, int]): Second x coordinate.
-            y2 (Union[float, int]): Second y coordinate.
-            format (BoundingBoxFormat, optional): Bounding box points format.
-                Defaults to BoundingBoxFormat.XYXY.
-            coords_type (CoordinatesType, optional): Coordinates type.
-                Defaults to CoordinatesType.ABSOLUTE.
-        """
-        BoundingBoxFormat.XYXY
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.format = format
-        self.coords_type = coords_type
+    @property
+    def numpy(self) -> np.ndarray:
+        raise NotImplementedError
+
+    @property
+    def size(self) -> Tuple[int_or_float, int_or_float]:
+        raise NotImplementedError
+
+    @property
+    def width(self) -> int_or_float:
+        raise NotImplementedError
+
+    @property
+    def height(self) -> int_or_float:
+        raise NotImplementedError
+
+    @property
+    def cx(self) -> int_or_float:
+        raise NotADirectoryError
+
+    @property
+    def cy(self) -> int_or_float:
+        raise NotADirectoryError
+
+    @property
+    def xmin(self) -> int_or_float:
+        raise NotADirectoryError
+
+    @property
+    def ymin(self) -> int_or_float:
+        raise NotADirectoryError
+
+    @property
+    def xmax(self) -> int_or_float:
+        raise NotADirectoryError
+
+    @property
+    def ymax(self) -> int_or_float:
+        raise NotADirectoryError
 
     def crop_image(self, image: np.ndarray) -> np.ndarray:
-        """Create a crop of an image using the bounding box.
+        raise NotImplementedError
 
-        Args:
-            image (np.ndarray): numpy image.
-
-        Returns:
-            np.ndarray: The cropped area of the image.
-        """
-        xmin, ymin, xmax, ymax = self.to(
-            format=BoundingBoxFormat.XYXY,
-            coords_type=CoordinatesType.ABSOLUTE,
-            image_width=image.shape[1],
-            image_height=image.shape[0]
-        ).numpy().astype(int)
-        return image[xmin:xmax, ymin:ymax]
-
-    def numpy(self) -> np.ndarray:
-        """Return the bounding box coordinates as a numpy array.
-
-        Returns:
-            np.ndarray: [x1, y1, x2, y2]
-        """
-        return np.array([self.x1, self.y1, self.x2, self.y2])
-
-    def to(
+    def to_absolute(
         self,
-        format: Optional[BoundingBoxFormat] = None,
-        coords_type: Optional[CoordinatesType] = None,
-        image_width: Optional[int] = None,
-        image_height: Optional[int] = None
-    ) -> BoundingBox:
-        """Convert the bounding box to a different format.
+        image_width: int,
+        image_height: int
+    ) -> Type[BaseBoundingBox]:
+        raise NotImplementedError
 
-        Args:
-            format (Optional[BoundingBoxFormat], optional): A new bounding box
-                format. If None, it will remain unchanged. Default to None.
-            coords_type (Optional[CoordinatesType], optional): A new coordinates
-                type. If None, it will remain unchanged. Default to None.
-            image_width (Optional[int], optional): Image width. Required if the
-                ``coords_type`` is changed. Defaults to None.
-            image_height (Optional[int], optional): Image height. Required if
-                the ``coords_type`` is changed. Defaults to None.
-
-        Raises:
-            NotImplementedError
-
-        Returns:
-            BoundingBox: A copy of the bounding box with the new format.
-        """
-        format = self.format if format is None else format
-        coords_type = self.coords_type if coords_type is None else coords_type
-        # Get the xmin, ymin, xmax, ymax
-        if self.format is BoundingBoxFormat.XYXY:
-            xmin = self.x1
-            ymin = self.y1
-            xmax = self.x2
-            ymax = self.y2
-        elif self.format is BoundingBoxFormat.X1Y1WH:
-            xmin = self.x1
-            ymin = self.y1
-            xmax = xmin + self.x2
-            ymax = ymin + self.y2
-        elif self.format is BoundingBoxFormat.CXCYWH:
-            xmin = self.x1 - (self.x2/2)
-            ymin = self.y1 - (self.y2/2)
-            xmax = self.x1 + (self.x2/2)
-            ymax = self.y1 + (self.y2/2)
-        else:
-            raise NotImplementedError
-        # Convert format
-        if format is BoundingBoxFormat.XYXY:
-            x1 = xmin
-            y1 = ymin
-            x2 = xmax
-            y2 = ymax
-        elif format is BoundingBoxFormat.X1Y1WH:
-            x1 = xmin
-            y1 = ymin
-            x2 = xmax - xmin
-            y2 = ymax - ymin
-        elif format is BoundingBoxFormat.CXCYWH:
-            x1 = (xmin + xmax)/2
-            y1 = (ymin + ymax)/2
-            x2 = xmax - xmin
-            y2 = ymax - ymin
-        else:
-            raise NotImplementedError
-        # Convert coords type
-        if coords_type != self.coords_type:
-            assert image_width is not None and image_height is not None
-            if coords_type is CoordinatesType.ABSOLUTE:
-                x1 = np.clip(round(x1 * (image_width-1)), 0, image_width)
-                x2 = np.clip(round(x2 * (image_width-1)), 0, image_width)
-                y1 = np.clip(round(y1 * (image_height-1)), 0, image_height)
-                y2 = np.clip(round(y2 * (image_height-1)), 0, image_height)
-            elif coords_type is CoordinatesType.RELATIVE:
-                x1 = np.clip(x1 / image_width, 0, 1)
-                x2 = np.clip(x2 / image_width, 0, 1)
-                y1 = np.clip(y1 / image_height, 0, 1)
-                y2 = np.clip(y2 / image_height, 0, 1)
-        return BoundingBox(x1, y1, x2, y2,
-                           format=format, coords_type=coords_type)
-
-    def size(self) -> Tuple[Union[int, float], Union[int, float]]:
-        """Return the bounding box size.
-
-        Returns:
-            Tuple[Union[int, float], Union[int, float]]: (width, height).
-                Absolute or relative according to the box coordinates type.
-        """
-        box = self.to(BoundingBoxFormat.X1Y1WH)
-        return (box.x2, box.y2)
-
-    def width(self) -> Union[int, float]:
-        """Returns:
-            Union[int, float]: The bounding box width. Absolute or relative
-                according to the box coordinates type.
-        """
-        return self.size()[0]
-
-    def height(self) -> Union[int, float]:
-        """Returns:
-            Union[int, float]: The bounding box height. Absolute or relative
-                according to the box coordinates type.
-        """
-        return self.size()[1]
-
-    def is_valid(
+    def to_relative(
         self,
-        image_width: Optional[int] = None,
-        image_height: Optional[int] = None
-    ) -> bool:
-        """Check if the coordinates of the bounding box are valid.
+        image_width: int,
+        image_height: int
+    ) -> Type[BaseBoundingBox]:
+        raise NotImplementedError
 
-        Args:
-            image_width (Optional[int], optional): Optional image width to
-                check the coordinates. Defaults to None.
-            image_height (Optional[int], optional): Optional image height to
-                check the coordinates. Defaults to None.
-
-        Returns:
-            bool: True if it is valid.
-        """
-        size = self.size()
-        if size[0] <= 0 or size[1] <= 0:
+    @property
+    def is_valid(self) -> bool:
+        if (self.xmin < 0 or self.ymin < 0 or self.xmin >= self.xmax or
+            self.ymin >= self.ymax):
             return False
-        if self.x1 < 0 or self.y1 < 0 or self.x2 < 0 or self.y2 < 0:
-            return False
-        if (self.coords_type is CoordinatesType.RELATIVE and
-                (self.x1 > 1 or self.y1 > 1 or self.x2 > 1 or self.y2 > 1)):
-            return False
-        if (self.coords_type is CoordinatesType.ABSOLUTE):
-            box = self.to(BoundingBoxFormat.XYXY)
-            if image_width is not None and box.x2 >= image_width:
-                return False
-            if image_height is not None and box.y2 >= image_height:
+        if self.coords_type is CoordinatesType.RELATIVE:
+            if self.xmin > 1 or self.xmax > 1 or self.ymin > 1 or self.ymax > 1:
                 return False
         return True
 
-    def resize(
+    @classmethod
+    def from_xyxy(
+        cls,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        raise NotImplementedError
+
+    def to(self, cls: Type[BaseBoundingBox]) -> Type[BaseBoundingBox]:
+        cls.from_xyxy(
+            xmin=self.xmin,
+            ymin=self.ymin,
+            xmax=self.xmax,
+            ymax=self.ymax,
+            coords_type=self.coords_type
+        )
+
+    def scale(
         self,
-        fx: Optional[float] = None,
-        fy: Optional[float] = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        source_with: Optional[int] = None,
-        source_height: Optional[int] = None,
+        fx: float = 1,
+        fy: float = 1,
         from_center: bool = False
-    ) -> BoundingBox:
-        """Resize the bounding box.
+    ) -> Type[BaseBoundingBox]:
+        """Scale the bounding box by a factor.
 
         Args:
-            fx (Optional[float], optional): The width scale factor.
-                Ignored if ``width`` is set. Defaults to None.
-            fy (Optional[float], optional): The height scale factor.
-                Ignored if ``height`` is set. Defaults to None.
-            width (Optional[int], optional): The . Defaults to None.
-            height (Optional[int], optional): _description_. Defaults to None.
-            source_with (Optional[int], optional): _description_. Defaults to None.
-            source_height (Optional[int], optional): _description_. Defaults to None.
-            from_center (bool, optional): _description_. Defaults to False.
+            fx (float, optional): Horizontal scale factor. Defaults to 1.
+            fy (float, optional): Vertical scale factor. Defaults to 1.
+            from_center (bool, optional): If the scale should be done from
+                the center of the box. Defaults to False.
 
         Returns:
-            BoundingBox: _description_
+            Type[BaseBoundingBox]: A scaled copy of the bounding box.
         """
-        if fx is not None and width is not None:
-            raise RuntimeWarning(
-                f"Both ``fx`` and ``width`` provided ({fx}, {width})")
-        if fy is not None and height is not None:
-            raise RuntimeWarning(
-                f"Both ``fy`` and ``height`` provided ({fy}, {height})")
-        
-
-
         if from_center:
-            x, y, w, h = self.to(BoundingBoxFormat.CXCYWH)
-            w *= fx
-            h *= fy
-            new_box = BoundingBox(x, y, w, h, format=BoundingBoxFormat.CXCYWH)
+            new_w = self.width * fx
+            new_h = self.height * fy
+            xmin = self.cx - (new_w/2)
+            ymin = self.cy - (new_h/2)
+            xmax = self.cx + (new_w/2)
+            ymax = self.cy + (new_h/2)
         else:
-            xmin, ymin, xmax, ymax = self.to(BoundingBoxFormat.XYXY)
-            xmin *= fx
-            ymin *= fy
-            xmax *= fx
-            ymax *= fy
-            new_box = BoundingBox(xmin, ymin, xmax, ymax,
-                                  format=BoundingBoxFormat.XYXY)
-        return new_box.to(self.format)
+            xmin = fx * self.xmin
+            ymin = fy * self.ymin
+            xmax = fx * self.xmax
+            ymax = fy * self.ymax
+        return type(self).from_xyxy(
+            xmin=xmin,
+            ymin=ymin,
+            xmax=xmax,
+            ymax=ymax,
+            coords_type=self.coords_type
+        )
 
+    def resize_to_image(
+        self,
+        new_width: int,
+        new_height: int,
+        src_width: int,
+        src_height: int
+    ) -> Type[BaseBoundingBox]:
+        """Resize a bounding box to a new image size. The box should be in
+        absolute coordinates.
+
+        Args:
+            new_width (int): New image width.
+            new_height (int): New image height.
+            src_width (int): Source image width.
+            src_height (int): Source image height.
+
+        Raises:
+            ValueError: If the coordinates are relative.
+
+        Returns:
+            Type[BaseBoundingBox]: A new resized bounding box object.
+        """
+        if self.coords_type is CoordinatesType.RELATIVE:
+            raise ValueError("Can not resize to image a relative bounding box")
+        fx = new_width / src_width
+        fy = new_height / src_height
+        return self.scale(fx=fx, fy=fy)
+
+    def to(self, cls: Type[BaseBoundingBox]) -> Type[BaseBoundingBox]:
+        raise NotImplementedError
+
+    @classmethod
+    def from_xyxy(self, xmin: ):
+        raise NotImplementedError
+    
+    def copy(self) -> Type[BaseBoundingBox]:
+        return deepcopy(self)
+
+    def __repr__(self) -> str:
+        raise NotImplementedError
+    
     def __str__(self) -> str:
         return repr(self)
 
+    @property
+    def size(self) -> Tuple[int_or_float, int_or_float]:
+        return (self.width, self.height)
+
+    def _cast_value(self, value: int_or_float) -> int_or_float:
+        if self.coords_type is CoordinatesType.ABSOLUTE:
+            return int(value)
+        return float(value)
+
+    def crop_image(self, image: np.ndarray) -> np.ndarray:
+        h, w = image.shape[:2]
+        box = self.to_absolute(w, h)
+        return image[box.ymin:box.ymax, box.xmin:box.xmax]
+
+
+class BoundingBoxXYXY(BaseBoundingBox):
+    """Bounding box from the top-left point (xmin, ymin) and bottom-right point
+    (xmax, ymax).
+    """
+
+    def __init__(
+        self,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        self.coords_type = coords_type
+        self._xmin = self._cast_value(xmin)
+        self._ymin = self._cast_value(ymin)
+        self._xmax = self._cast_value(xmax)
+        self._ymax = self._cast_value(ymax)
+
+    @property
+    def numpy(self) -> np.ndarray:
+        return np.array(
+            [self._xmin, self._ymin, self._xmax, self._ymax],
+            dtype=("int" if self.coords_type is CoordinatesType.ABSOLUTE
+                   else "float")
+        )
+
+    @property
+    def width(self) -> int_or_float:
+        return self._xmax - self._xmin
+
+    @property
+    def height(self) -> int_or_float:
+        return self._ymax - self._ymin
+
+    @property
+    def cx(self) -> int_or_float:
+        return self._cast_value(
+            (self.xmin + self.xmax)/2
+        )
+
+    @property
+    def cy(self) -> int_or_float:
+        return self._cast_value(
+            (self.ymin + self.ymax)/2
+        )
+
+    @property
+    def xmin(self) -> int_or_float:
+        return self._xmin
+
+    @property
+    def ymin(self) -> int_or_float:
+        return self._ymin
+
+    @property
+    def xmax(self) -> int_or_float:
+        return self._xmax
+
+    @property
+    def ymax(self) -> int_or_float:
+        return self._ymax
+
+    def to_absolute(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxXYXY:
+        if self.coords_type is CoordinatesType.ABSOLUTE:
+            return self.copy()
+        return BoundingBoxXYXY(
+            xmin=np.clip(round(self._xmin * (image_width-1)), 0, image_width),
+            ymin=np.clip(round(self._ymin * (image_height-1)), 0, image_height),
+            xmax=np.clip(round(self._xmax * (image_width-1)), 0, image_width),
+            ymax=np.clip(round(self._ymax * (image_height-1)), 0, image_height),
+            coords_type=CoordinatesType.ABSOLUTE
+        )
+
+    def to_relative(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxXYXY:
+        if self.coords_type is CoordinatesType.RELATIVE:
+            return self.copy()
+        return BoundingBoxXYXY(
+            xmin=np.clip(self._xmin / image_width, 0, 1),
+            ymin=np.clip(self._ymin / image_height, 0, 1),
+            xmax=np.clip(self._xmax / image_width, 0, 1),
+            ymax=np.clip(self._ymax / image_height, 0, 1),
+            coords_type=CoordinatesType.RELATIVE
+        )
+
+    @classmethod
+    def from_xyxy(
+        cls,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        return BoundingBoxXYXY(
+            xmin=xmin,
+            ymin=ymin,
+            xmax=xmax,
+            ymax=ymax,
+            coords_type=coords_type
+        )
+        
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(x1={self.x1}, y1={self.y1}, x2={self.x2}, y2={self.y2})"
+        return f"BoundingBoxXYXY(xmin={self.xmin}, ymin={self.ymin}, xmax={self.xmax}, ymax={self.ymax}, coords_type={self.coords_type})"
+
+
+class BoundingBoxCXCYWH(BaseBoundingBox):
+    """Bounding box from the center point (cx, cy) and width and height (w, h).
+    """
+
+    def __init__(
+        self,
+        cx: int_or_float,
+        cy: int_or_float,
+        w: int_or_float,
+        h: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        self.coords_type = coords_type
+        self._cx = self._cast_value(cx)
+        self._cy = self._cast_value(cy)
+        self._w = self._cast_value(w)
+        self._h = self._cast_value(h)
+
+    @property
+    def numpy(self) -> np.ndarray:
+        return np.array(
+            [self._cx, self._cy, self._w, self._h],
+            dtype=("int" if self.coords_type is CoordinatesType.ABSOLUTE
+                   else "float")
+        )
+
+    @property
+    def width(self) -> int_or_float:
+        return self._w
+
+    @property
+    def height(self) -> int_or_float:
+        return self._h
+
+    @property
+    def cx(self) -> int_or_float:
+        return self._cx
+
+    @property
+    def cy(self) -> int_or_float:
+        return self.cy
+
+    @property
+    def xmin(self) -> int_or_float:
+        return self._cast_value(
+            self._cx - (self.w / 2)
+        )
+
+    @property
+    def ymin(self) -> int_or_float:
+        return self._cast_value(
+            self._cy - (self.h / 2)
+        )
+
+    @property
+    def xmax(self) -> int_or_float:
+        return self._cast_value(
+            self._cx + (self.w / 2)
+        )
+
+    @property
+    def ymax(self) -> int_or_float:
+        return self._cast_value(
+            self._cy + (self.h / 2)
+        )
+
+    def to_absolute(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxCXCYWH:
+        if self.coords_type is CoordinatesType.ABSOLUTE:
+            return self.copy()
+        return BoundingBoxCXCYWH(
+            cx=np.clip(round(self._cx * (image_width-1)), 0, image_width),
+            cy=np.clip(round(self._cy * (image_height-1)), 0, image_height),
+            w=np.clip(round(self._w * (image_width-1)), 0, image_width),
+            h=np.clip(round(self._h * (image_height-1)), 0, image_height),
+            coords_type=CoordinatesType.ABSOLUTE
+        )
+
+    def to_relative(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxCXCYWH:
+        if self.coords_type is CoordinatesType.RELATIVE:
+            return self.copy()
+        return BoundingBoxCXCYWH(
+            cx=np.clip(self._cx / image_width, 0, 1),
+            cy=np.clip(self._cy / image_height, 0, 1),
+            w=np.clip(self._w / image_width, 0, 1),
+            h=np.clip(self._h / image_height, 0, 1),
+            coords_type=CoordinatesType.RELATIVE
+        )
+
+    @classmethod
+    def from_xyxy(
+        cls,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        return BoundingBoxCXCYWH(
+            cx=(xmin + xmax) / 2,
+            cy=(ymin + ymax) / 2,
+            w=(xmax - xmin),
+            h=(ymax - ymin),
+            coords_type=coords_type
+        )
+        
+    def __repr__(self) -> str:
+        return f"BoundingBoxCXCYWH(cx={self._cx}, cy={self._cy}, w={self._w}, h={self._h}, coords_type={self.coords_type})"
+
+
+class BoundingBoxX1Y1WH(BaseBoundingBox):
+    """Bounding box from the top-left point (xmin, ymin) and width and height
+    (w, h).
+    """
+
+    def __init__(
+        self,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        w: int_or_float,
+        h: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        self.coords_type = coords_type
+        self._xmin = self._cast_value(xmin)
+        self._ymin = self._cast_value(ymin)
+        self._w = self._cast_value(w)
+        self._h = self._cast_value(h)
+
+    @property
+    def numpy(self) -> np.ndarray:
+        return np.array(
+            [self._xmin, self._ymin, self._w, self._h],
+            dtype=("int" if self.coords_type is CoordinatesType.ABSOLUTE
+                   else "float")
+        )
+
+    @property
+    def width(self) -> int_or_float:
+        return self._w
+
+    @property
+    def height(self) -> int_or_float:
+        return self._h
+
+    @property
+    def cx(self) -> int_or_float:
+        return self._cast_value(
+            self._xmin + (self._w/2)
+        )
+
+    @property
+    def cy(self) -> int_or_float:
+        return self._cast_value(
+            self._ymin + (self._h/2)
+        )
+
+    @property
+    def xmin(self) -> int_or_float:
+        return self._xmin
+
+    @property
+    def ymin(self) -> int_or_float:
+        return self._ymin
+
+    @property
+    def xmax(self) -> int_or_float:
+        return self._xmin + self._w
+
+    @property
+    def ymax(self) -> int_or_float:
+        return self._ymin + self._h
+
+    def to_absolute(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxX1Y1WH:
+        if self.coords_type is CoordinatesType.ABSOLUTE:
+            return self.copy()
+        return BoundingBoxX1Y1WH(
+            xmin=np.clip(round(self._xmin * (image_width-1)), 0, image_width),
+            ymin=np.clip(round(self._ymin * (image_height-1)), 0, image_height),
+            w=np.clip(round(self._w * (image_width-1)), 0, image_width),
+            h=np.clip(round(self._h * (image_height-1)), 0, image_height),
+            coords_type=CoordinatesType.ABSOLUTE
+        )
+
+    def to_relative(
+        self,
+        image_width: int,
+        image_height: int
+    ) -> BoundingBoxX1Y1WH:
+        if self.coords_type is CoordinatesType.RELATIVE:
+            return self.copy()
+        return BoundingBoxX1Y1WH(
+            xmin=np.clip(self._xmin / image_width, 0, 1),
+            ymin=np.clip(self._ymin / image_height, 0, 1),
+            w=np.clip(self._w / image_width, 0, 1),
+            h=np.clip(self._h / image_height, 0, 1),
+            coords_type=CoordinatesType.RELATIVE
+        )
+
+    @classmethod
+    def from_xyxy(
+        cls,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
+        return BoundingBoxX1Y1WH(
+            xmin=xmin,
+            ymin=ymin,
+            w=(xmax - xmin),
+            h=(ymax - ymin),
+            coords_type=coords_type
+        )
+        
+    def __repr__(self) -> str:
+        return f"BoundingBoxX1Y1WH(xmin={self._xmin}, ymin={self._ymin}, w={self._w}, h={self._h}, coords_type={self.coords_type})"
+
+
+# class BoundingBox(BaseBoundingBox):
