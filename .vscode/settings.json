@@ -7,5 +7,12 @@
         "omegaconf",
         "supercategory",
         "XYXY"
+    ],
+    "grammarly.selectors": [
+        {
+            "language": "python",
+            "scheme": "file",
+            "pattern": "DatasetTools/Visualization/draw.py"
+        }
     ]
 }

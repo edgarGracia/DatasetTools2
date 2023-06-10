@@ -172,7 +172,7 @@ class BoundingBox:
         """
         box = self.to(BoundingBoxFormat.X1Y1WH)
         return (box.x2, box.y2)
-    
+
     def width(self) -> Union[int, float]:
         """Returns:
             Union[int, float]: The bounding box width. Absolute or relative
@@ -208,8 +208,8 @@ class BoundingBox:
             return False
         if self.x1 < 0 or self.y1 < 0 or self.x2 < 0 or self.y2 < 0:
             return False
-        if (self.coords_type is CoordinatesType.RELATIVE and 
-            (self.x1 > 1 or self.y1 > 1 or self.x2 > 1 or self.y2 > 1)):
+        if (self.coords_type is CoordinatesType.RELATIVE and
+                (self.x1 > 1 or self.y1 > 1 or self.x2 > 1 or self.y2 > 1)):
             return False
         if (self.coords_type is CoordinatesType.ABSOLUTE):
             box = self.to(BoundingBoxFormat.XYXY)
@@ -245,6 +245,29 @@ class BoundingBox:
         Returns:
             BoundingBox: _description_
         """
+        if fx is not None and width is not None:
+            raise RuntimeWarning(
+                f"Both ``fx`` and ``width`` provided ({fx}, {width})")
+        if fy is not None and height is not None:
+            raise RuntimeWarning(
+                f"Both ``fy`` and ``height`` provided ({fy}, {height})")
+        
+
+
+        if from_center:
+            x, y, w, h = self.to(BoundingBoxFormat.CXCYWH)
+            w *= fx
+            h *= fy
+            new_box = BoundingBox(x, y, w, h, format=BoundingBoxFormat.CXCYWH)
+        else:
+            xmin, ymin, xmax, ymax = self.to(BoundingBoxFormat.XYXY)
+            xmin *= fx
+            ymin *= fy
+            xmax *= fx
+            ymax *= fy
+            new_box = BoundingBox(xmin, ymin, xmax, ymax,
+                                  format=BoundingBoxFormat.XYXY)
+        return new_box.to(self.format)
 
     def __str__(self) -> str:
         return repr(self)

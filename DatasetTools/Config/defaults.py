@@ -20,6 +20,8 @@ cfg.DATASET.IMAGES_PATH: str = None
 cfg.VIS = OmegaConf.create()
 cfg.VIS.IMG_WIDTH: Optional[int] = None
 cfg.VIS.IMG_HEIGHT: Optional[int] = None
+cfg.VIS.IMG_BACKGROUND: bool = True
+cfg.VIS.IMG_BG_COLOR: Tuple[int, int, int] = (0, 0, 0)
 
 # Text
 cfg.VIS.TEXT = OmegaConf.create()

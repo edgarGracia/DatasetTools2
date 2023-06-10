@@ -45,7 +45,7 @@ def get_color(
             return color
         if isinstance(palette, str) or palette is None:
             return [
-                int(i*255) for i in 
+                int(i*255) for i in
                 sns.color_palette(
                     palette, instance.label_id+1
                 )[instance.label_id]
@@ -56,33 +56,33 @@ def get_color(
             return color
         if isinstance(palette, str) or palette is None:
             return [
-                int(i*255) for i in 
+                int(i*255) for i in
                 sns.color_palette(
                     palette, instance.instance_id+1
                 )[instance.instance_id]
             ]
         return palette[instance]
     raise NotImplementedError
-    
+
 
 def draw_text(
     image: np.ndarray,
     text: Union[str, List[str]],
     position: Tuple[int, int],
-    color: Tuple[int, int, int] = (255,255,255),
+    color: Tuple[int, int, int] = (255, 255, 255),
     scale: int = 1,
     thickness: int = 1,
     line_space: int = 15,
     relative_position: RelativePosition = RelativePosition.TOP_LEFT,
     background: bool = True,
-    background_color: Tuple[int, int, int] = (50,50,50),
+    background_color: Tuple[int, int, int] = (50, 50, 50),
     background_alpha: float = 1,
     background_margin: int = 0
 ) -> np.ndarray:
     """Draw text in an image.
 
     TODO
-    
+
     Raises:
         NotImplementedError
 
@@ -91,7 +91,7 @@ def draw_text(
     """
     if not text:
         return image
-    
+
     text_lines = text.splitlines() if isinstance(text, str) else text
     max_text_len = max(text_lines, key=lambda x: len(x))
 
@@ -259,7 +259,7 @@ def draw_text(
 def draw_bounding_box(
     image: np.ndarray,
     bounding_box: BoundingBox,
-    color: Tuple[int, int, int] = (255,255,255),
+    color: Tuple[int, int, int] = (255, 255, 255),
     alpha: float = 1,
     thickness: int = 1,
     fill: bool = False,
@@ -268,19 +268,27 @@ def draw_bounding_box(
 ) -> np.ndarray:
     """Draw a bounding box in an image.
 
-    TODO
-
-    Raises:
-        NotImplementedError
+    Args:
+        image (np.ndarray): _description_
+        bounding_box (BoundingBox): _description_
+        color (Tuple[int, int, int], optional): _description_. Defaults to (255, 255, 255).
+        alpha (float, optional): _description_. Defaults to 1.
+        thickness (int, optional): _description_. Defaults to 1.
+        fill (bool, optional): _description_. Defaults to False.
+        fx (Optional[float], optional): _description_. Defaults to None.
+        fy (Optional[float], optional): _description_. Defaults to None.
 
     Returns:
-        np.ndarray: The image with the bounding box drawn.
+        np.ndarray: _description_
     """
     thickness = -1 if fill else thickness
-    
+
     if alpha <= 0:
         return image
-    
+
+    if (fx is not None and fx != 1) or (fy is not None and fy != 1):
+        bounding_box = bounding_box.resize(fx=fx, fy=fy)
+
     xmin, ymin, xmax, ymax = bounding_box.to(
         BoundingBoxFormat.XYXY,
         CoordinatesType.ABSOLUTE,
@@ -293,17 +301,17 @@ def draw_bounding_box(
             np.zeros_like(image),
             (xmin, ymin),
             (xmax, ymax),
-            (1,1,1),
+            (1, 1, 1),
             thickness
         )
         color_mask = np.clip(box_mask * color, 0, 255).astype("uint8")
-        image[box_mask==1] = cv2.addWeighted(
-            image[box_mask==1],
+        image[box_mask == 1] = cv2.addWeighted(
+            image[box_mask == 1],
             1-alpha,
-            color_mask[box_mask==1],
+            color_mask[box_mask == 1],
             alpha,
             0
-        )[:,0]
+        )[:, 0]
     else:
         image = cv2.rectangle(
             image,
@@ -319,14 +327,18 @@ def draw_bounding_box(
 def draw_instance(
     image: np.ndarray,
     instance: Instance,
+    fx: Optional[float] = None,
+    fy: Optional[float] = None,
     cfg: Optional[DictConfig] = None,
     **kwargs
 ) -> np.ndarray:
-    """TODO
+    """_summary_
 
     Args:
         image (np.ndarray): _description_
         instance (Instance): _description_
+        fx (Optional[float], optional): _description_. Defaults to None.
+        fy (Optional[float], optional): _description_. Defaults to None.
         cfg (Optional[DictConfig], optional): _description_. Defaults to None.
 
     Returns:
@@ -349,9 +361,12 @@ def draw_instance(
             alpha=cfg.VIS.BOX.ALPHA,
             thickness=cfg.VIS.BOX.THICKNESS,
             fill=cfg.VIS.BOX.FILL,
+            fx=fx,
+            fy=fy
         )
-    # if 
-    
+    # if
+
+
 def resize_image(
     image: np.ndarray,
     width: Optional[int] = None,
@@ -383,31 +398,71 @@ def resize_image(
     return cv2.resize(image, None, fx=f, fy=f)
 
 
+def get_image(dataset_image: Image, cfg: DictConfig) -> np.ndarray:
+    """Get a numpy image from an Image object.
+
+    Args:
+        dataset_image (Image): The Image object.
+        cfg (DictConfig): A  cfg.
+
+    Raises:
+        ValueError: If the image can not be read correctly or the size of 
+            can not be determined.
+
+    Returns:
+        np.ndarray: A numpy image.
+    """
+    if cfg.VIS.IMG_BACKGROUND:
+        image = cv2.imread(str(dataset_image.path))
+        if image is None:
+            raise ValueError(f"Image is None ({dataset_image.path})")
+        return image
+    if cfg.VIS.IMG_WIDTH is not None and cfg.VIS.IMG_HEIGHT is not None:
+        return np.full(
+            (cfg.VIS.IMG_HEIGHT, cfg.VIS.IMG_WIDTH, 3),
+            cfg.VIS.IMG_BG_COLOR,
+            dtype="uint8"
+        )
+    if dataset_image.width is not None and dataset_image.height is not None:
+        return np.zeros(
+            (dataset_image.height, dataset_image.width, 3),
+            cfg.VIS.IMG_BG_COLOR,
+            dtype="uint8"
+        )
+    if dataset_image.path.exists():
+        image = cv2.imread(str(dataset_image.path))
+        if image is None:
+            raise ValueError(f"Image is None ({dataset_image.path})")
+        return np.full_like(image, cfg.VIS.IMG_BG_COLOR)
+    raise ValueError("Can not determine the image size!")
+
 
 def draw_image_annotations(
     dataset_image: Image,
     cfg: Optional[DictConfig] = None
 ) -> np.ndarray:
-    """_summary_
+    """Draw the annotations of an Image object.
 
     Args:
-        dataset_image (Image): _description_
-        cfg (Optional[DictConfig], optional): _description_. Defaults to None.
-
-    Raises:
-        ValueError: _description_
+        dataset_image (Image): An Image object.
+        cfg (Optional[DictConfig], optional): A cfg. If None, the default
+            one will be used. Defaults to None.
 
     Returns:
-        np.ndarray: _description_
+        np.ndarray: The image with the annotations drawn.
     """
-    image = cv2.imread(str(dataset_image.path))
-    if image is None:
-        raise ValueError(f"Image is None: {dataset_image.path}")
-    if cfg.VIS.IMG_WIDTH is not None or cfg.VIS.IMG_HEIGHT is not None:
-        image = resize_image(image, cfg.VIS.IMG_WIDTH, cfg.VIS.IMG_HEIGHT)
+    image = get_image(dataset_image, cfg)
+    
+    h, w = image.shape[:2]
+    if ((cfg.VIS.IMG_WIDTH is not None and cfg.VIS.IMG_WIDTH != w) or
+            (cfg.VIS.IMG_HEIGHT is not None and cfg.VIS.IMG_HEIGHT != h)):
+        image, fx, fy = resize_image(
+            image, cfg.VIS.IMG_WIDTH, cfg.VIS.IMG_HEIGHT)
+    
     annotations = dataset_image.annotations
     for annot in annotations:
-        draw_instance(image=image, instance=annot, cfg=cfg)
+        draw_instance(image=image, instance=annot, fx=fx, fy=fy, cfg=cfg)
+
     return image
 
 
