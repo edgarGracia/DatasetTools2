@@ -7,7 +7,7 @@ from omegaconf import OmegaConf
 import ast
 
 
-from DatasetTools.Config import defaults
+from DatasetTools.config import defaults
 
 
 def get_cfg() -> DictConfig:

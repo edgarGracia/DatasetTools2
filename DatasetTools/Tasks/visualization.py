@@ -10,10 +10,10 @@ import numpy as np
 from omegaconf import DictConfig
 from tqdm import tqdm
 
-from DatasetTools.Config.config import get_cfg
-from DatasetTools.Datasets.base_parser import BaseParser
+from DatasetTools.config.config import get_cfg
+from DatasetTools.datasets.base_parser import BaseParser
 from DatasetTools.utils.utils import add_opts_arg
-from DatasetTools.Visualization.draw import draw_image_annotations
+from DatasetTools.visualization.draw import draw_image_annotations
 
 from .base_task import BaseTask
 
@@ -74,7 +74,7 @@ class Visualization(BaseTask):
             help="Visualize the dataset's images and annotations"
         )
         ap.add_argument(
-            "--s",
+            "-s",
             "--show",
             dest="show",
             action="store_true",
@@ -87,7 +87,7 @@ class Visualization(BaseTask):
             help="Set what library use to show the images"
         )
         ap.add_argument(
-            "--o",
+            "-o",
             "--output",
             dest="output",
             help="Output path"

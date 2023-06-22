@@ -5,7 +5,7 @@ from typing import Optional, Type
 
 from omegaconf import DictConfig
 
-from DatasetTools.Datasets.base_parser import BaseParser
+from DatasetTools.datasets.base_parser import BaseParser
 
 
 class BaseTask:

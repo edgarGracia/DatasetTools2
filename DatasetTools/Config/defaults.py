@@ -29,10 +29,9 @@ cfg.VIS.TEXT.VISIBLE: bool = True
 cfg.VIS.TEXT.SCALE: int = 1
 cfg.VIS.TEXT.THICKNESS: int = 1
 cfg.VIS.TEXT.COLOR: Tuple[int, int, int] = (255, 255, 255)
-cfg.VIS.TEXT.ALPHA: float = 1
 # Optional Seaborn color palette or list of colors
 cfg.VIS.TEXT.PALETTE: Optional[Union[str, List[Tuple[int, int, int]]]] = None
-cfg.VIS.TEXT.COLOR_SOURCE: ColorSource = ColorSource.LABEL
+cfg.VIS.TEXT.COLOR_SOURCE: ColorSource = ColorSource.SOLID
 cfg.VIS.TEXT.LINE_SPACE: int = 15
 cfg.VIS.TEXT.POSITION: RelativePosition = RelativePosition.BOTTOM_RIGHT
 
@@ -45,7 +44,10 @@ cfg.VIS.TEXT_BG.ALPHA: float = 0.75
 cfg.VIS.TEXT_BG.PALETTE: Optional[Union[str,
                                         List[Tuple[int, int, int]]]] = None
 cfg.VIS.TEXT_BG.COLOR_SOURCE: ColorSource = ColorSource.LABEL
-cfg.VIS.TEXT_BG.MARGIN: int = 0
+cfg.VIS.TEXT_BG.MARGIN: int = 5
+
+# Text content. WARNING: This expression will be executed with an ``eval``!!
+cfg.VIS.TEXT.FORMATTER: str = 'f"{instance.label} ({instance.label_id})"'
 
 # Bounding boxes
 cfg.VIS.BOX = OmegaConf.create()

@@ -2,8 +2,8 @@ from typing import List, Optional
 
 from omegaconf import DictConfig
 
-from DatasetTools.Config.config import get_cfg
-from DatasetTools.Structures.image import Image
+from DatasetTools.config.config import get_cfg
+from DatasetTools.structures.image import Image
 
 
 class BaseParser:

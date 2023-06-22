@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Optional, Union
 
-from DatasetTools.Structures.instance import Instance
+from DatasetTools.structures.instance import Instance
 
 
 class Image:

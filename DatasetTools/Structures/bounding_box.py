@@ -185,7 +185,14 @@ class BaseBoundingBox:
         raise NotImplementedError
 
     @classmethod
-    def from_xyxy(self, xmin: ):
+    def from_xyxy(
+        cls,
+        xmin: int_or_float,
+        ymin: int_or_float,
+        xmax: int_or_float,
+        ymax: int_or_float,
+        coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
+    ):
         raise NotImplementedError
     
     def copy(self) -> Type[BaseBoundingBox]:

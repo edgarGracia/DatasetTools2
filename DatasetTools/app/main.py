@@ -2,9 +2,9 @@ import argparse
 
 from  omegaconf import OmegaConf
 
-from DatasetTools.Config.config import get_cfg, update_copy_str
-from DatasetTools.Datasets import data_parsers
-from DatasetTools.Tasks import tasks
+from DatasetTools.config.config import get_cfg, update_copy_str
+from DatasetTools.datasets import data_parsers
+from DatasetTools.tasks import tasks
 
 
 

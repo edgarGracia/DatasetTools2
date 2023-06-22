@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
-from DatasetTools.Structures import bounding_box
-from DatasetTools.Structures.image import Image
-from DatasetTools.Structures.instance import Instance
-from DatasetTools.Structures.mask import Mask
+from DatasetTools.structures import bounding_box
+from DatasetTools.structures.image import Image
+from DatasetTools.structures.instance import Instance
+from DatasetTools.structures.mask import Mask
 from DatasetTools.utils.utils import get_logger
 
 from .base_parser import BaseParser
