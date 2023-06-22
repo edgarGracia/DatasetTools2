@@ -1,15 +1,15 @@
 from __future__ import annotations
-from typing import Optional, Dict
+from typing import Optional, Dict, Type
 from dataclasses import dataclass, field
 from copy import deepcopy
 
-from DatasetTools.Structures.bounding_box import BoundingBox
+from DatasetTools.Structures.bounding_box import BaseBoundingBox
 from DatasetTools.Structures.mask import Mask
 
 
 @dataclass
 class Instance:
-    bounding_box: Optional[BoundingBox] = None
+    bounding_box: Optional[Type[BaseBoundingBox]] = None
     label: Optional[str] = None
     label_id: Optional[int] = None
     id: Optional[int] = None

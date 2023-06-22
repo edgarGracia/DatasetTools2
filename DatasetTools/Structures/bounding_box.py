@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum, unique
-from typing import Optional, Union, Tuple, Type
+from typing import Union, Tuple, Type
 from copy import deepcopy
 
 import numpy as np
@@ -555,6 +555,3 @@ class BoundingBoxX1Y1WH(BaseBoundingBox):
         
     def __repr__(self) -> str:
         return f"BoundingBoxX1Y1WH(xmin={self._xmin}, ymin={self._ymin}, w={self._w}, h={self._h}, coords_type={self.coords_type})"
-
-
-# class BoundingBox(BaseBoundingBox):

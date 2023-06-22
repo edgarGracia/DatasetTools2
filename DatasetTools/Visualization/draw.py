@@ -10,8 +10,7 @@ from DatasetTools.Config.config import get_cfg, update_copy
 from DatasetTools.utils.utils import ColorSource, RelativePosition
 from DatasetTools.Structures.instance import Instance
 from DatasetTools.Structures.image import Image
-from DatasetTools.Structures.bounding_box import (BoundingBoxFormat,
-                                                  BoundingBox, CoordinatesType)
+from DatasetTools.Structures import bounding_box
 
 CV2_FONT = cv2.FONT_HERSHEY_SIMPLEX
 

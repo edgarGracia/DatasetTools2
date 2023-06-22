@@ -1,9 +1,7 @@
 import json
 from pathlib import Path
 
-from DatasetTools.Structures.bounding_box import (BoundingBox,
-                                                  BoundingBoxFormat,
-                                                  CoordinatesType)
+from DatasetTools.Structures import bounding_box
 from DatasetTools.Structures.image import Image
 from DatasetTools.Structures.instance import Instance
 from DatasetTools.Structures.mask import Mask
@@ -70,13 +68,12 @@ class COCODataset(BaseParser):
         # Parse annotations
         for annot in data["annotations"]:
             if "bbox" in annot:
-                box = BoundingBox(
+                box = bounding_box.BoundingBoxX1Y1WH(
                     annot["bbox"][0],
                     annot["bbox"][1],
                     annot["bbox"][2],
                     annot["bbox"][3],
-                    format=BoundingBoxFormat.X1Y1WH,
-                    coords_type=CoordinatesType.ABSOLUTE
+                    coords_type=bounding_box.CoordinatesType.ABSOLUTE
                 )
             else:
                 box = None
