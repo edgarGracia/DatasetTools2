@@ -5,6 +5,7 @@
         "CXCYWH",
         "KEYPOINTS",
         "omegaconf",
+        "opencv",
         "supercategory",
         "XYXY"
     ],

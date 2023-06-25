@@ -1,108 +1,83 @@
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
-from typing import Optional, Type
+from typing import Type, Union
 
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 from omegaconf import DictConfig
 from tqdm import tqdm
 
-from DatasetTools.config.config import get_cfg
-from DatasetTools.datasets.base_parser import BaseParser
-from DatasetTools.utils.utils import add_opts_arg
+from DatasetTools.data_parsers.base_parser import BaseParser
+from DatasetTools.utils import image_utils
+from DatasetTools.visualization import create_visualizer
 from DatasetTools.visualization.draw import draw_image_annotations
 
 from .base_task import BaseTask
 
 
 class Visualization(BaseTask):
+    """Visualize the dataset annotations.
+    """
 
     def __init__(
         self,
-        show: bool = False,
-        show_lib: str = "matplotlib",
-        output: Optional[str] = None,
-        cfg: Optional[DictConfig] = None
+        cfg: DictConfig,
+        output_path: Union[str, Path],
+        show: bool,
+        gui_visualizers: str,
+        ext: str = ".png"
     ):
-        self.cfg = get_cfg() if cfg is None else cfg
+        """Create a visualization task object.
+
+        Args:
+            cfg (DictConfig): A configuration object.
+            output_path (Union[str, Path]): Output images folder.
+            show (bool): Show the images in a GUI.
+            gui_visualizers (str): Name of the GUI visualizer.
+            ext (str, optional): Image extension. Defaults to ".png".
+        """
+        super().__init__(cfg)
+        self.cfg = cfg
+        self.output_path = output_path
         self.show = show
-        self.show_lib = show_lib
-        self.output = Path(output) if output else None
+        self.gui_visualizers = gui_visualizers
+        self.ext = ext
 
     def run(self, parser: Type[BaseParser]):
-        images = parser.images()
+        """Run the visualization task.
 
-        for image in tqdm(images):
-            vis_image = draw_image_annotations(image, self.cfg)
-            if self.show:
-                self._show(vis_image)
-            if self.output is not None:
-                self._save_image(vis_image, image.path)
+        Args:
+            parser (Type[BaseParser]): A loaded data parser.
+        """
+        visualizer = create_visualizer(
+            self.gui_visualizers
+        ) if self.show else None
 
-    def _save_image(self, image: np.ndarray, input_path: Path):
-        out_path = self.output / input_path.name
-        if out_path == input_path:
-            raise FileExistsError(
-                "Output image path is equal to the source image path!")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        cv2.imwrite(str(out_path), image)
-
-    def _show(self, image: np.ndarray):
-        if self.show_lib == "matplotlib":
-            self._show_plt(image)
-        elif self.show_lib == "cv2":
-            self._show_cv2(image)
+        if self.output_path is not None:
+            output_path = Path(self.output_path)
+            output_path.mkdir(parents=True, exist_ok=True)
         else:
-            raise NotImplementedError
+            output_path = None
 
-    def _show_plt(self, image: np.ndarray):
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        plt.imshow(rgb)
-        plt.show()
+        print("Press ctrl+c to stop")
+        try:
+            for image in tqdm(parser.images()):
+                vis_image = draw_image_annotations(self.cfg, image)
+                if output_path is not None:
+                    self._write_image(output_path, image.path, vis_image)
+                if visualizer:
+                    visualizer.show(vis_image, image_mode="BGR")
+        except KeyboardInterrupt:
+            pass
 
-    def _show_cv2(self, image: np.ndarray):
-        cv2.imshow(self.__class__.__name__, image)
-        cv2.waitKey(0)
-
-    @classmethod
-    def add_sub_parser(cls, parent_parser: argparse.ArgumentParser):
-        ap = parent_parser.add_parser(
-            cls.__name__.lower(),
-            help="Visualize the dataset's images and annotations"
-        )
-        ap.add_argument(
-            "-s",
-            "--show",
-            dest="show",
-            action="store_true",
-            help="Show the images on a window"
-        )
-        ap.add_argument(
-            "--show-lib",
-            choices=["matplotlib", "cv2"],
-            default="matplotlib",
-            help="Set what library use to show the images"
-        )
-        ap.add_argument(
-            "-o",
-            "--output",
-            dest="output",
-            help="Output path"
-        )
-        add_opts_arg(ap)
-
-    @classmethod
-    def from_args(
-        cls,
-        args: argparse.Namespace,
-        cfg: Optional[DictConfig]
-    ) -> Visualization:
-        return Visualization(
-            show=args.show,
-            show_lib=args.show_lib,
-            output=args.output,
-            cfg=cfg
-        )
+    def _write_image(
+        self,
+        output_path: Path,
+        input_path: Path,
+        image: np.ndarray
+    ):
+        file_path = output_path / (input_path.stem + self.ext)
+        if file_path == input_path:
+            raise FileExistsError(
+                "Output image path can not be equal to input")
+        image_utils.write_image(str(file_path), image)

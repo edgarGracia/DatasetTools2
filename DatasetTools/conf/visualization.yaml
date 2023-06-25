@@ -1,0 +1,91 @@
+# @package visualization
+
+img_width:  null
+img_height:  null
+img_background: True
+img_bg_color: [0, 0, 0]
+
+text:
+  visible: True
+  scale:  1
+  thickness:  1
+  color: [255, 255, 255]
+  palette: null       # Seaborn color palette or list of colors
+  color_source: SOLID # ColorSource Enum
+  line_space: 15
+  position: BOTTOM_RIGHT # RelativePosition Enum
+  formatter: f"{instance.label} ({instance.label_id})"    # WARNING: This expression will be executed with an ``eval``!!
+
+text_bg:
+  visible: True
+  color: [224, 56, 84]
+  alpha: 0.75
+  palette: null       # Seaborn color palette or list of colors
+  color_source: LABEL # ColorSource Enum
+  margin: 5
+
+box:
+  visible: True
+  thickness:  1
+  color: [224, 56, 84]
+  alpha: 1
+  palette: null            # Seaborn color palette or list of colors
+  color_source: LABEL      # ColorSource Enum
+  text_position: TOP_LEFT  # RelativePosition Enum
+  fill: False
+
+mask:
+  visible: True
+  alpha: 0.75
+  color: [21, 57, 255]
+  palette: null       # Seaborn color palette or list of colors
+  color_source: LABEL # ColorSource Enum
+
+kp:
+  visible: True
+  radius:  5
+  line_thickness:  3
+  names_visible: False
+  connections_visible: True
+  kp_visible: True
+  color: [0, 0, 255]
+  color_source: LABEL    # ColorSource Enum
+  kp_colors: {
+    "left_ear": [255, 0, 255],
+    "right_ear": [255, 255, 0],
+    "left_eye": [223, 0, 255],
+    "right_eye": [223, 255, 0],
+    "nose": [255, 255, 255],
+    "left_shoulder": [191, 0, 255],
+    "right_shoulder": [191, 255, 0],
+    "left_elbow": [159, 0, 255],
+    "right_elbow": [159, 255, 0],
+    "left_wrist": [127, 0, 255],
+    "right_wrist": [127, 255, 0],
+    "left_hip": [95, 0, 255],
+    "right_hip": [95, 255, 0],
+    "left_knee": [63, 0, 255],
+    "right_knee": [63, 255, 0],
+    "left_ankle": [31, 0, 255],
+    "right_ankle": [31, 255, 0]
+}
+
+connections:
+  - ["left_ear", "left_eye", [239, 0, 255]]
+  - ["right_ear", "right_eye", [239, 235, 0]]
+  - ["left_eye", "nose", [255, 0, 255]]
+  - ["nose", "right_eye", [255, 255, 0]]
+  - ["left_shoulder", "right_shoulder", [191, 255, 255]]
+  - ["left_shoulder", "left_elbow", [175, 0, 255]]
+  - ["right_shoulder", "right_elbow", [175, 255, 0]]
+  - ["left_elbow", "left_wrist", [143, 0, 255]]
+  - ["right_elbow", "right_wrist", [143, 255, 0]]
+  - ["left_hip", "right_hip", [95, 255, 255]]
+  - ["left_hip", "left_knee", [63, 0, 255]]
+  - ["right_hip", "right_knee", [63, 255, 0]]
+  - ["left_knee", "left_ankle", [47, 0, 255]]
+  - ["right_knee", "right_ankle", [47, 255, 0]]
+  - ["left_shoulder", "left_hip", [143, 0, 255]]
+  - ["right_shoulder", "right_hip", [143, 255, 0]]
+  - ["nose", "left_shoulder", [223, 0, 255]]
+  - ["nose", "right_shoulder", [223, 255, 0]]

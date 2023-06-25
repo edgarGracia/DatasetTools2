@@ -6,3 +6,6 @@ draw text alpha
 Resize images
 Save cfg arg
 Center relative pos
+Filters:
+    visualize a single or a list of images
+    filter annotations

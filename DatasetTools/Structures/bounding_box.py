@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from enum import Enum, unique
-from typing import Union, Tuple, Type
 from copy import deepcopy
+from typing import Tuple, Type
 
 import numpy as np
 
-int_or_float = Union[int, float]
-
-
-@unique
-class CoordinatesType(Enum):
-    RELATIVE = "RELATIVE"
-    ABSOLUTE = "ABSOLUTE"
+from DatasetTools.structures import CoordinatesType
+from DatasetTools.utils.utils import int_or_float
 
 
 class BaseBoundingBox:
@@ -89,7 +83,7 @@ class BaseBoundingBox:
     @property
     def is_valid(self) -> bool:
         if (self.xmin < 0 or self.ymin < 0 or self.xmin >= self.xmax or
-            self.ymin >= self.ymax):
+                self.ymin >= self.ymax):
             return False
         if self.coords_type is CoordinatesType.RELATIVE:
             if self.xmin > 1 or self.xmax > 1 or self.ymin > 1 or self.ymax > 1:
@@ -194,13 +188,13 @@ class BaseBoundingBox:
         coords_type: CoordinatesType = CoordinatesType.ABSOLUTE
     ):
         raise NotImplementedError
-    
+
     def copy(self) -> Type[BaseBoundingBox]:
         return deepcopy(self)
 
     def __repr__(self) -> str:
         raise NotImplementedError
-    
+
     def __str__(self) -> str:
         return repr(self)
 
@@ -291,9 +285,11 @@ class BoundingBoxXYXY(BaseBoundingBox):
             return self.copy()
         return BoundingBoxXYXY(
             xmin=np.clip(round(self._xmin * (image_width-1)), 0, image_width),
-            ymin=np.clip(round(self._ymin * (image_height-1)), 0, image_height),
+            ymin=np.clip(round(self._ymin * (image_height-1)),
+                         0, image_height),
             xmax=np.clip(round(self._xmax * (image_width-1)), 0, image_width),
-            ymax=np.clip(round(self._ymax * (image_height-1)), 0, image_height),
+            ymax=np.clip(round(self._ymax * (image_height-1)),
+                         0, image_height),
             coords_type=CoordinatesType.ABSOLUTE
         )
 
@@ -328,7 +324,7 @@ class BoundingBoxXYXY(BaseBoundingBox):
             ymax=ymax,
             coords_type=coords_type
         )
-        
+
     def __repr__(self) -> str:
         return f"BoundingBoxXYXY(xmin={self.xmin}, ymin={self.ymin}, xmax={self.xmax}, ymax={self.ymax}, coords_type={self.coords_type})"
 
@@ -445,7 +441,7 @@ class BoundingBoxCXCYWH(BaseBoundingBox):
             h=(ymax - ymin),
             coords_type=coords_type
         )
-        
+
     def __repr__(self) -> str:
         return f"BoundingBoxCXCYWH(cx={self._cx}, cy={self._cy}, w={self._w}, h={self._h}, coords_type={self.coords_type})"
 
@@ -522,7 +518,8 @@ class BoundingBoxX1Y1WH(BaseBoundingBox):
             return self.copy()
         return BoundingBoxX1Y1WH(
             xmin=np.clip(round(self._xmin * (image_width-1)), 0, image_width),
-            ymin=np.clip(round(self._ymin * (image_height-1)), 0, image_height),
+            ymin=np.clip(round(self._ymin * (image_height-1)),
+                         0, image_height),
             w=np.clip(round(self._w * (image_width-1)), 0, image_width),
             h=np.clip(round(self._h * (image_height-1)), 0, image_height),
             coords_type=CoordinatesType.ABSOLUTE
@@ -559,6 +556,6 @@ class BoundingBoxX1Y1WH(BaseBoundingBox):
             h=(ymax - ymin),
             coords_type=coords_type
         )
-        
+
     def __repr__(self) -> str:
         return f"BoundingBoxX1Y1WH(xmin={self._xmin}, ymin={self._ymin}, w={self._w}, h={self._h}, coords_type={self.coords_type})"

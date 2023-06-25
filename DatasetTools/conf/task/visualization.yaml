@@ -1,0 +1,5 @@
+_target_: DatasetTools.tasks.visualization.Visualization
+show: False
+gui_visualizers: matplotlib_visualizer
+output_path: null
+ext: .png

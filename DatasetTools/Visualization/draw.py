@@ -1,22 +1,19 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import seaborn as sns
-from omegaconf import DictConfig
-import seaborn as sns
-
-from DatasetTools.config.config import get_cfg, update_copy
-from DatasetTools.utils.utils import ColorSource, RelativePosition
-from DatasetTools.structures.instance import Instance
+from DatasetTools.structures import ColorSource, RelativePosition, bounding_box
 from DatasetTools.structures.image import Image
-from DatasetTools.structures import bounding_box
+from DatasetTools.structures.instance import Instance
+from DatasetTools.utils import image_utils
+from omegaconf import DictConfig
 
 CV2_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def get_color(
-    color_source: ColorSource,
+    color_source: Union[ColorSource, str],
     color: Tuple[int, int, int],
     palette: Optional[Union[str, List[Tuple[int, int, int]]]],
     instance: Optional[Instance] = None
@@ -24,7 +21,7 @@ def get_color(
     """Get the color of an instance for the given parameters.
 
     Args:
-        color_source (ColorSource): The color source.
+        color_source (Union[ColorSource, str]): The color source.
         color (Tuple[int, int, int]): A single color.
         palette (Optional[Union[str, List[Tuple[int, int, int]]]]): The name of
             a Seaborn palette, list of colors or None.
@@ -37,6 +34,7 @@ def get_color(
     Returns:
         Tuple[int, int, int]: A color.
     """
+    color_source = ColorSource[color_source]
     if color_source is ColorSource.SOLID:
         return color
     if color_source is ColorSource.LABEL:
@@ -66,18 +64,19 @@ def get_color(
 
 def get_text_position_from_box(
     box: bounding_box.BaseBoundingBox,
-    relative_position: RelativePosition
+    relative_position: Union[RelativePosition, str]
 ) -> Tuple[int, int]:
     """Get the correct initial position of a text given a bounding box.
 
     Args:
         box (bounding_box.BaseBoundingBox): A bounding box object.
-        relative_position (RelativePosition): In which corner of the box put
-            the text.
+        relative_position (Union[RelativePosition, str]): In which corner of
+            the box put the text.
 
     Returns:
         Tuple[int, int]: Final text position (x, y).
     """
+    relative_position = RelativePosition(relative_position)
     xmin, ymin, xmax, ymax = box.xmin, box.ymin, box.xmax, box.ymax
     if relative_position is RelativePosition.TOP_LEFT:
         return (xmin, ymin)
@@ -99,7 +98,7 @@ def draw_text(
     scale: int = 1,
     thickness: int = 1,
     line_space: int = 15,
-    relative_position: RelativePosition = RelativePosition.TOP_RIGHT,
+    relative_position: Union[RelativePosition, str] = RelativePosition.TOP_RIGHT,
     background: bool = True,
     background_color: Tuple[int, int, int] = (50, 50, 50),
     background_alpha: float = 1,
@@ -117,8 +116,8 @@ def draw_text(
         scale (int, optional): The scale of the text. Defaults to 1.
         thickness (int, optional): The text thickness_. Defaults to 1.
         line_space (int, optional): Line spacing. Defaults to 15.
-        relative_position (RelativePosition, optional): Relative position of
-            the text to the provided position. Defaults to
+        relative_position (Union[RelativePosition, str], optional): Relative
+            position of the text to the provided position. Defaults to
             RelativePosition.TOP_RIGHT.
         background (bool, optional): Whether draw a background area behind the
             actual text. Defaults to True.
@@ -134,6 +133,7 @@ def draw_text(
     if not text:
         return image
 
+    relative_position = RelativePosition(relative_position)
     text_lines = text.splitlines() if isinstance(text, str) else text
     
     # Compute the final text size
@@ -171,7 +171,6 @@ def draw_text(
         ymin = max(y - box_h, 0)
         xmax = min(x + text_w + (margin * 2), image.shape[1])
         ymax = min(y, image.shape[0])
-        print("\n", ymin, ymax, xmin, xmax, background_alpha, y, image.shape, box_h)
         
         if background_alpha < 1:
             bg = np.full(
@@ -280,31 +279,25 @@ def instance_text_formatter(
     """
     return eval(f"str({expression})")
 
+
 def draw_instance(
+    cfg,
     image: np.ndarray,
     instance: Instance,
     scale: Optional[Tuple[float, float]] = None,
-    cfg: Optional[DictConfig] = None,
-    **kwargs
 ) -> np.ndarray:
-    """Draw an instance object over a given image.
+    """Draw an instance object over an image.
 
     Args:
+        cfg (DictConfig): A configuration object.
         image (np.ndarray): Numpy image of shape (H, W, 3) and "uint8" dtype.
         instance (Instance): The Instance object to draw.
-        scale (Optional[Tuple[float, float]]): The scale factor (x, y), used to
-            scale the instance's structures in case the image was resized.
-            Defaults to None.
-        cfg (Optional[DictConfig], optional): A configuration object.
-            Defaults to None.
-        **kwargs: Arguments to override the cfg.
+        scale (Optional[Tuple[float, float]]): The scale factor (x, y) to
+            scale the structures in case the image is resized. Defaults to None.
 
     Returns:
-        np.ndarray: The source image with the instance's data drawn.
+        np.ndarray: The image with the instance's data data drawn.
     """
-    if kwargs:
-        cfg = update_copy(cfg, kwargs)
-
     box = instance.bounding_box
 
     # Draw bounding box
@@ -312,40 +305,42 @@ def draw_instance(
         if scale is not None:
             box = box.scale(*scale)
         
-        if cfg.VIS.BOX.VISIBLE:
+        if cfg.visualization.box.visible:
             box_color = get_color(
-                color_source=cfg.VIS.BOX.COLOR_SOURCE,
-                color=cfg.VIS.BOX.COLOR,
-                palette=cfg.VIS.BOX.PALETTE,
+                color_source=cfg.visualization.box.color_source,
+                color=cfg.visualization.box.color,
+                palette=cfg.visualization.box.palette,
                 instance=instance,
             )
             draw_bounding_box(
                 image=image,
                 box=box,
                 color=box_color,
-                alpha=cfg.VIS.BOX.ALPHA,
-                thickness=cfg.VIS.BOX.THICKNESS,
-                fill=cfg.VIS.BOX.FILL
+                alpha=cfg.visualization.box.alpha,
+                thickness=cfg.visualization.box.thickness,
+                fill=cfg.visualization.box.fill
             )
 
         # Draw text along the box
-        if cfg.VIS.TEXT.VISIBLE and cfg.VIS.TEXT.FORMATTER:
-            text = instance_text_formatter(instance, cfg.VIS.TEXT.FORMATTER)
+        if cfg.visualization.text.visible and cfg.visualization.text.formatter:
+            text = instance_text_formatter(
+                instance,
+                cfg.visualization.text.formatter
+            )
             position = get_text_position_from_box(
                 box=box,
-                relative_position=cfg.VIS.BOX.TEXT_POSITION
+                relative_position=cfg.visualization.box.text_position
             )
-            print(position)
             text_color = get_color(
-                color_source=cfg.VIS.TEXT.COLOR_SOURCE,
-                color=cfg.VIS.TEXT.COLOR,
-                palette=cfg.VIS.TEXT.PALETTE,
+                color_source=cfg.visualization.text.color_source,
+                color=cfg.visualization.text.color,
+                palette=cfg.visualization.text.palette,
                 instance=instance,
             )
             text_bg_color = get_color(
-                color_source=cfg.VIS.TEXT_BG.COLOR_SOURCE,
-                color=cfg.VIS.TEXT_BG.COLOR,
-                palette=cfg.VIS.TEXT_BG.PALETTE,
+                color_source=cfg.visualization.text_bg.color_source,
+                color=cfg.visualization.text_bg.color,
+                palette=cfg.visualization.text_bg.palette,
                 instance=instance,
             )
             draw_text(
@@ -353,115 +348,79 @@ def draw_instance(
                 text=text,
                 position=position,
                 color=text_color,
-                scale=cfg.VIS.TEXT.SCALE,
-                thickness=cfg.VIS.TEXT.THICKNESS,
-                line_space=cfg.VIS.TEXT.LINE_SPACE,
-                relative_position=cfg.VIS.TEXT.POSITION,
-                background=cfg.VIS.TEXT_BG.VISIBLE,
+                scale=cfg.visualization.text.scale,
+                thickness=cfg.visualization.text.thickness,
+                line_space=cfg.visualization.text.line_space,
+                relative_position=cfg.visualization.text.position,
+                background=cfg.visualization.text_bg.visible,
                 background_color=text_bg_color,
-                background_alpha=cfg.VIS.TEXT_BG.ALPHA,
-                margin=cfg.VIS.TEXT_BG.MARGIN
+                background_alpha=cfg.visualization.text_bg.alpha,
+                margin=cfg.visualization.text_bg.margin
             )
+    return image
 
 
-def resize_image(
-    image: np.ndarray,
-    width: Optional[int] = None,
-    height: Optional[int] = None
-) -> Tuple[np.ndarray, float, float]:
-    """Resize an image to the given width and height.
-
-    Args:
-        image (np.ndarray): The image to resize.
-        width (Optional[int], optional): Desired width.
-            If None it will resize the image with the provided ``height``,
-            maintaining the aspect ration. Defaults to None.
-        height (Optional[int], optional): Desired height.
-            If None it will resize the image with the provided ``width``,
-            maintaining the aspect ration. Defaults to None.
-
-    Returns:
-        Tuple(np.ndarray, float, float): The resized image, the horizontal
-            resize factor and the vertical resize factor.
-    """
-    if width is None and height is None:
-        return image, 1, 1
-    h, w, = image.shape[:2]
-    if width is not None and height is not None:
-        return cv2.resize(image, (width, height)), width / w, height / h
-    if width is not None:
-        f = width / w
-    elif height is not None:
-        f = height / h
-    return (cv2.resize(image, None, fx=f, fy=f), f, f)
-
-
-def get_image(dataset_image: Image, cfg: DictConfig) -> np.ndarray:
+def get_image(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
     """Get a numpy image from an Image object.
 
     Args:
+        cfg (DictConfig): A configuration object.
         dataset_image (Image): The Image object.
-        cfg (DictConfig): A  cfg.
 
     Raises:
-        ValueError: If the image can not be read correctly or the size of 
-            can not be determined.
+        ValueError: If the image can not be read or its size can not
+            be determined.
 
     Returns:
         np.ndarray: A numpy image.
     """
-    if cfg.VIS.IMG_BACKGROUND:
+    if cfg.visualization.img_background:
         image = cv2.imread(str(dataset_image.path))
         if image is None:
-            raise ValueError(f"Image is None ({dataset_image.path})")
+            raise ValueError(f"Cannot read image ({dataset_image.path})")
         return image
-    if cfg.VIS.IMG_WIDTH is not None and cfg.VIS.IMG_HEIGHT is not None:
+    if (cfg.visualization.img_width is not None and
+        cfg.visualization.img_height is not None):
         return np.full(
-            (cfg.VIS.IMG_HEIGHT, cfg.VIS.IMG_WIDTH, 3),
-            cfg.VIS.IMG_BG_COLOR,
+            (cfg.visualization.img_height, cfg.visualization.img_width, 3),
+            cfg.visualization.img_bg_color,
             dtype="uint8"
         )
     if dataset_image.width is not None and dataset_image.height is not None:
-        return np.zeros(
+        return np.full(
             (dataset_image.height, dataset_image.width, 3),
-            cfg.VIS.IMG_BG_COLOR,
+            cfg.visualization.img_bg_color,
             dtype="uint8"
         )
     if dataset_image.path.exists():
         image = cv2.imread(str(dataset_image.path))
         if image is None:
-            raise ValueError(f"Image is None ({dataset_image.path})")
-        return np.full_like(image, cfg.VIS.IMG_BG_COLOR)
-    raise ValueError("Can not determine the image size!")
+            raise ValueError(f"Cannot read image ({dataset_image.path})")
+        return np.full_like(image, cfg.VIS.img_bg_color)
+    raise ValueError("Cannot determine the image size")
 
 
-def draw_image_annotations(
-    dataset_image: Image,
-    cfg: Optional[DictConfig] = None
-) -> np.ndarray:
+def draw_image_annotations(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
     """Draw the annotations of an Image object.
 
     Args:
+        cfg (DictConfig): A configuration object.
         dataset_image (Image): An Image object.
-        cfg (Optional[DictConfig], optional): A configuration object.
-            If None, the default will be used. Defaults to None.
 
     Returns:
         np.ndarray: An image with the annotations drawn.
     """
-    image = get_image(dataset_image, cfg)
-    image_scale = None
+    image = get_image(cfg, dataset_image)
     
-    h, w = image.shape[:2]
-    if ((cfg.VIS.IMG_WIDTH is not None and cfg.VIS.IMG_WIDTH != w) or
-            (cfg.VIS.IMG_HEIGHT is not None and cfg.VIS.IMG_HEIGHT != h)):
-        image, fx, fy = resize_image(
-            image, cfg.VIS.IMG_WIDTH, cfg.VIS.IMG_HEIGHT)
-        image_scale = (fx, fy)
+    image, fx, fy = image_utils.resize_image(
+        image,
+        cfg.visualization.img_width,
+        cfg.visualization.img_height
+    )
     
     annotations = dataset_image.annotations
     for annot in annotations:
-        draw_instance(image=image, instance=annot, scale=image_scale, cfg=cfg)
+        draw_instance(cfg, image, annot, (fx, fy))
 
     return image
 
