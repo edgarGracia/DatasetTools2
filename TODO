@@ -1,9 +1,5 @@
 Sort dataset images cfg option (+order)
-Visualize a single image?
+Parser list of image/annotations?
 Run only from cfg
 draw text alpha
-Resize images
 Save cfg arg
-Filters:
-    visualize a single or a list of images
-    filter annotations
