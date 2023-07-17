@@ -1,3 +1,4 @@
 _target_: DatasetTools.data_parsers.coco_parser.COCODataset
 images_path: null
 annotations_path: null
+# TODO: image_list: null # List or file with a list of image or annotations file names to process
