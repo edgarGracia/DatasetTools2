@@ -6,10 +6,10 @@ from typing import Type, Union
 import numpy as np
 from omegaconf import DictConfig
 from tqdm import tqdm
+from hydra.utils import instantiate
 
 from DatasetTools.data_parsers.base_parser import BaseParser
 from DatasetTools.utils import image_utils
-from DatasetTools.visualization import create_visualizer
 from DatasetTools.visualization.draw import draw_image_annotations
 
 from .base_task import BaseTask
@@ -49,9 +49,8 @@ class Visualization(BaseTask):
         Args:
             parser (Type[BaseParser]): A loaded data parser.
         """
-        visualizer = create_visualizer(
-            self.gui_visualizers
-        ) if self.show else None
+        if self.show:
+            visualizer = instantiate(self.gui_visualizers)
 
         if self.output_path is not None:
             output_path = Path(self.output_path)
@@ -61,7 +60,7 @@ class Visualization(BaseTask):
 
         print("Press ctrl+c to stop")
         try:
-            for image in tqdm(parser.images()):
+            for image in tqdm(parser.images(), unit="img"):
                 vis_image = draw_image_annotations(self.cfg, image)
                 if output_path is not None:
                     self._write_image(output_path, image.path, vis_image)

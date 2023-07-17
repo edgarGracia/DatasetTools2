@@ -1,6 +1,9 @@
 import json
 import logging
 from pathlib import Path
+from typing import List
+
+from omegaconf import DictConfig
 
 from DatasetTools.structures import bounding_box
 from DatasetTools.structures.image import Image
@@ -15,6 +18,12 @@ logger = logging.getLogger(__name__)
 class COCODataset(BaseParser):
     """Parse a COCO dataset from a .json file.
     """
+
+    def __init__(self, cfg: DictConfig, images_path, annotations_path):
+        self.cfg = cfg
+        self.images_path = images_path
+        self.annotations_path = annotations_path
+        self._images: List[Image] = []
 
     def load(self):
         """Parse and load a COCO dataset.
@@ -34,8 +43,8 @@ class COCODataset(BaseParser):
             images_path = None
 
         # Save the info into the cfg
-        if "info" in data:
-            self.cfg.dataset.meta = data["info"]
+        # if "info" in data:
+        #     self.cfg.dataset.meta = data["info"]
 
         # Parse categories
         categories = {}
@@ -46,7 +55,7 @@ class COCODataset(BaseParser):
                 "name": cat["name"],
                 "supercategory": cat["supercategory"]
             }
-        self.cfg.dataset.labels = {k: v["name"] for k, v in categories.items()}
+        # self.cfg.dataset.labels = {k: v["name"] for k, v in categories.items()}
 
         # Parse images
         images = {}
@@ -121,3 +130,8 @@ class COCODataset(BaseParser):
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "
                            f"annotation: {[i.id for i in non_annot]}")
+
+    def images(self) -> List[Image]:
+        """Get a list with the images of the dataset
+        """
+        return self._images

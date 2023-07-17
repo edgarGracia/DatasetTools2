@@ -1,14 +1,12 @@
 import hydra
-from omegaconf import DictConfig
 from hydra.utils import instantiate
-
-from DatasetTools.data_parsers import create_parser
+from omegaconf import DictConfig
 
 
 @hydra.main(config_path="conf", config_name="defaults", version_base=hydra.__version__)
 def main(cfg: DictConfig) -> None:
 
-    data_parser = create_parser(cfg)
+    data_parser = instantiate(cfg.dataset, cfg=cfg, _recursive_=False)
     data_parser.load()
 
     if cfg.task._target_ is not None:

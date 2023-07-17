@@ -9,12 +9,14 @@ text:
   visible: True
   scale:  1
   thickness:  1
+  border: 1
+  border_color: [0,0,0]
   color: [255, 255, 255]
   palette: null       # Seaborn color palette or list of colors
   color_source: SOLID # ColorSource Enum
   line_space: 15
   position: BOTTOM_RIGHT # RelativePosition Enum
-  formatter: f"{instance.label} ({instance.label_id})"    # WARNING: This expression will be executed with an ``eval``!!
+  formatter: f"{instance.label} ({instance.label_id})" # WARNING: This expression will be executed with an ``eval``
 
 text_bg:
   visible: True

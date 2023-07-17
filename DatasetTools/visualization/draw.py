@@ -3,11 +3,13 @@ from typing import List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import seaborn as sns
-from DatasetTools.structures import ColorSource, RelativePosition, bounding_box
+from omegaconf import DictConfig
+
+from DatasetTools.structures import ColorSource, RelativePosition, bounding_box, CoordinatesType
 from DatasetTools.structures.image import Image
 from DatasetTools.structures.instance import Instance
 from DatasetTools.utils import image_utils
-from omegaconf import DictConfig
+from DatasetTools.utils.image_utils import read_image
 
 CV2_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -18,7 +20,7 @@ def get_color(
     palette: Optional[Union[str, List[Tuple[int, int, int]]]],
     instance: Optional[Instance] = None
 ) -> Tuple[int, int, int]:
-    """Get the color of an instance for the given parameters.
+    """Get the color of an instance.
 
     Args:
         color_source (Union[ColorSource, str]): The color source.
@@ -86,6 +88,8 @@ def get_text_position_from_box(
         return (xmin, ymax)
     elif relative_position is RelativePosition.BOTTOM_RIGHT:
         return (xmax, ymax)
+    elif relative_position is RelativePosition.CENTER:
+        return ((xmax+xmin)//2, (ymax+ymin)//2)
     else:
         raise NotImplementedError(str(relative_position))
 
@@ -97,8 +101,11 @@ def draw_text(
     color: Tuple[int, int, int] = (255, 255, 255),
     scale: int = 1,
     thickness: int = 1,
+    border: int = 0,
+    border_color: Tuple[int, int, int] = (0, 0, 0),
     line_space: int = 15,
-    relative_position: Union[RelativePosition, str] = RelativePosition.TOP_RIGHT,
+    relative_position: Union[RelativePosition,
+                             str] = RelativePosition.TOP_RIGHT,
     background: bool = True,
     background_color: Tuple[int, int, int] = (50, 50, 50),
     background_alpha: float = 1,
@@ -115,6 +122,9 @@ def draw_text(
             Defaults to (255, 255, 255).
         scale (int, optional): The scale of the text. Defaults to 1.
         thickness (int, optional): The text thickness_. Defaults to 1.
+        border (int, optional): Text border. Defaults to 0.
+        border_color (Tuple[int, int], optional): Border color. Defaults to
+            (0,0,0).
         line_space (int, optional): Line spacing. Defaults to 15.
         relative_position (Union[RelativePosition, str], optional): Relative
             position of the text to the provided position. Defaults to
@@ -135,7 +145,7 @@ def draw_text(
 
     relative_position = RelativePosition(relative_position)
     text_lines = text.splitlines() if isinstance(text, str) else text
-    
+
     # Compute the final text size
     max_text_len = max(text_lines, key=lambda x: len(x))
     (text_w, text_h), _ = cv2.getTextSize(
@@ -158,6 +168,9 @@ def draw_text(
     elif relative_position is RelativePosition.BOTTOM_LEFT:
         x -= text_w + (margin*2)
         y += box_h
+    elif relative_position is RelativePosition.CENTER:
+        x -= (text_w//2) + margin
+        y += (box_h//2)
     else:
         raise NotImplementedError(str(relative_position))
 
@@ -171,7 +184,7 @@ def draw_text(
         ymin = max(y - box_h, 0)
         xmax = min(x + text_w + (margin * 2), image.shape[1])
         ymax = min(y, image.shape[0])
-        
+
         if background_alpha < 1:
             bg = np.full(
                 (ymax-ymin, xmax-xmin, 3),
@@ -197,6 +210,10 @@ def draw_text(
     # Draw the text lines
     for i, line in enumerate(reversed(text_lines)):
         dy = i * (text_h + scale * line_space)
+        if border > 0:
+            cv2.putText(
+                image, line, (x + margin, y - margin - dy), CV2_FONT, scale,
+                border_color, thickness+border, cv2.LINE_AA)
         cv2.putText(
             image, line, (x + margin, y - margin - dy), CV2_FONT, scale, color,
             thickness, cv2.LINE_AA)
@@ -304,7 +321,6 @@ def draw_instance(
     if box is not None:
         if scale is not None:
             box = box.scale(*scale)
-        
         if cfg.visualization.box.visible:
             box_color = get_color(
                 color_source=cfg.visualization.box.color_source,
@@ -320,43 +336,45 @@ def draw_instance(
                 thickness=cfg.visualization.box.thickness,
                 fill=cfg.visualization.box.fill
             )
+    else:
+        box = bounding_box.BoundingBoxXYXY(0,0,1,1,CoordinatesType.RELATIVE)
 
-        # Draw text along the box
-        if cfg.visualization.text.visible and cfg.visualization.text.formatter:
-            text = instance_text_formatter(
-                instance,
-                cfg.visualization.text.formatter
-            )
-            position = get_text_position_from_box(
-                box=box,
-                relative_position=cfg.visualization.box.text_position
-            )
-            text_color = get_color(
-                color_source=cfg.visualization.text.color_source,
-                color=cfg.visualization.text.color,
-                palette=cfg.visualization.text.palette,
-                instance=instance,
-            )
-            text_bg_color = get_color(
-                color_source=cfg.visualization.text_bg.color_source,
-                color=cfg.visualization.text_bg.color,
-                palette=cfg.visualization.text_bg.palette,
-                instance=instance,
-            )
-            draw_text(
-                image=image,
-                text=text,
-                position=position,
-                color=text_color,
-                scale=cfg.visualization.text.scale,
-                thickness=cfg.visualization.text.thickness,
-                line_space=cfg.visualization.text.line_space,
-                relative_position=cfg.visualization.text.position,
-                background=cfg.visualization.text_bg.visible,
-                background_color=text_bg_color,
-                background_alpha=cfg.visualization.text_bg.alpha,
-                margin=cfg.visualization.text_bg.margin
-            )
+    # Draw text along the box
+    if cfg.visualization.text.visible and cfg.visualization.text.formatter:
+        text = instance_text_formatter(
+            instance,
+            cfg.visualization.text.formatter
+        )
+        position = get_text_position_from_box(
+            box=box,
+            relative_position=cfg.visualization.box.text_position
+        )
+        text_color = get_color(
+            color_source=cfg.visualization.text.color_source,
+            color=cfg.visualization.text.color,
+            palette=cfg.visualization.text.palette,
+            instance=instance,
+        )
+        text_bg_color = get_color(
+            color_source=cfg.visualization.text_bg.color_source,
+            color=cfg.visualization.text_bg.color,
+            palette=cfg.visualization.text_bg.palette,
+            instance=instance,
+        )
+        draw_text(
+            image=image,
+            text=text,
+            position=position,
+            color=text_color,
+            scale=cfg.visualization.text.scale,
+            thickness=cfg.visualization.text.thickness,
+            line_space=cfg.visualization.text.line_space,
+            relative_position=cfg.visualization.text.position,
+            background=cfg.visualization.text_bg.visible,
+            background_color=text_bg_color,
+            background_alpha=cfg.visualization.text_bg.alpha,
+            margin=cfg.visualization.text_bg.margin
+        )
     return image
 
 
@@ -374,29 +392,33 @@ def get_image(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
     Returns:
         np.ndarray: A numpy image.
     """
+    
+    # Read image
     if cfg.visualization.img_background:
-        image = cv2.imread(str(dataset_image.path))
-        if image is None:
-            raise ValueError(f"Cannot read image ({dataset_image.path})")
-        return image
+        return read_image(dataset_image.path)
+    
+    # Set a solid color background from the cfg image size
     if (cfg.visualization.img_width is not None and
-        cfg.visualization.img_height is not None):
+            cfg.visualization.img_height is not None):
         return np.full(
             (cfg.visualization.img_height, cfg.visualization.img_width, 3),
             cfg.visualization.img_bg_color,
             dtype="uint8"
         )
+    
+    # Set a solid color background from the dataset image size
     if dataset_image.width is not None and dataset_image.height is not None:
         return np.full(
             (dataset_image.height, dataset_image.width, 3),
             cfg.visualization.img_bg_color,
             dtype="uint8"
         )
+    
+    # Set a solid color background from the image size
     if dataset_image.path.exists():
-        image = cv2.imread(str(dataset_image.path))
-        if image is None:
-            raise ValueError(f"Cannot read image ({dataset_image.path})")
+        image = read_image(dataset_image.path)
         return np.full_like(image, cfg.VIS.img_bg_color)
+    
     raise ValueError("Cannot determine the image size")
 
 
@@ -411,13 +433,13 @@ def draw_image_annotations(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
         np.ndarray: An image with the annotations drawn.
     """
     image = get_image(cfg, dataset_image)
-    
+
     image, fx, fy = image_utils.resize_image(
         image,
         cfg.visualization.img_width,
         cfg.visualization.img_height
     )
-    
+
     annotations = dataset_image.annotations
     for annot in annotations:
         draw_instance(cfg, image, annot, (fx, fy))

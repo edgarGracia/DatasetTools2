@@ -51,10 +51,16 @@ def read_image(path: Union[str, Path]) -> np.ndarray:
     Args:
         path (Union[str, Path]): Path to the image file.
 
+    Raises:
+        ValueError: If the image cannot be read.
+
     Returns:
         np.ndarray: Numpy ``BGR`` image of shape (H, W, 3) and ``uint8`` dtype.
     """
-    return cv2.imread(str(path))
+    img = cv2.imread(str(path))
+    if img is None:
+        raise ValueError(f"Cannot read image ({path})")
+    return img
 
 
 def write_image(path: Union[str, Path], image: np.ndarray) -> None:
