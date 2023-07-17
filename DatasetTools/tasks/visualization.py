@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Type, Union
+from typing import Type
 
 import numpy as np
+from hydra.utils import instantiate
 from omegaconf import DictConfig
 from tqdm import tqdm
-from hydra.utils import instantiate
 
 from DatasetTools.data_parsers.base_parser import BaseParser
 from DatasetTools.utils import image_utils
+from DatasetTools.utils.utils import path_or_str
 from DatasetTools.visualization.draw import draw_image_annotations
 
 from .base_task import BaseTask
@@ -22,7 +23,7 @@ class Visualization(BaseTask):
     def __init__(
         self,
         cfg: DictConfig,
-        output_path: Union[str, Path],
+        output_path: path_or_str,
         show: bool,
         gui_visualizers: str,
         ext: str = ".png"
@@ -31,7 +32,7 @@ class Visualization(BaseTask):
 
         Args:
             cfg (DictConfig): A configuration object.
-            output_path (Union[str, Path]): Output images folder.
+            output_path (path_or_str): Output images folder.
             show (bool): Show the images in a GUI.
             gui_visualizers (str): Name of the GUI visualizer.
             ext (str, optional): Image extension. Defaults to ".png".

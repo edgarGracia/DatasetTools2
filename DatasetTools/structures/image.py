@@ -1,14 +1,15 @@
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from DatasetTools.structures.instance import Instance
+from DatasetTools.utils.utils import path_or_str
 
 
 class Image:
 
     def __init__(
         self,
-        path: Union[Path, str],
+        path: path_or_str,
         width: Optional[int] = None,
         height: Optional[int] = None,
         id: Optional[int] = None,
@@ -19,7 +20,7 @@ class Image:
         self.width = width
         self.height = height
         self.id = id
-        self.annotations = [] if annotations is None else annotations 
+        self.annotations = [] if annotations is None else annotations
         self.meta = meta
 
     @property

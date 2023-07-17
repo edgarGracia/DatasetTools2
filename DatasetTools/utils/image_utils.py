@@ -1,8 +1,10 @@
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
+
+from DatasetTools.utils.utils import path_or_str
 
 
 def bgr_to_rgb(image: np.ndarray) -> np.ndarray:
@@ -45,11 +47,11 @@ def resize_image(
     return (cv2.resize(image, None, fx=f, fy=f), f, f)
 
 
-def read_image(path: Union[str, Path]) -> np.ndarray:
+def read_image(path: path_or_str) -> np.ndarray:
     """Read an image.
 
     Args:
-        path (Union[str, Path]): Path to the image file.
+        path (path_or_str): Path to the image file.
 
     Raises:
         ValueError: If the image cannot be read.
@@ -63,11 +65,11 @@ def read_image(path: Union[str, Path]) -> np.ndarray:
     return img
 
 
-def write_image(path: Union[str, Path], image: np.ndarray) -> None:
+def write_image(path: path_or_str, image: np.ndarray) -> None:
     """Save an image.
 
     Args:
-        path (Union[str, Path]): Output file path.
+        path (path_or_str): Output file path.
         image (np.ndarray): A ``BGR`` numpy image of shape (H, W, 3) and
             ``uint8`` dtype.
     """

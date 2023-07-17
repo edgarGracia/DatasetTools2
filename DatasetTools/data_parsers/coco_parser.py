@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Optional, Union
 
 from omegaconf import DictConfig
 
@@ -9,6 +9,7 @@ from DatasetTools.structures import bounding_box
 from DatasetTools.structures.image import Image
 from DatasetTools.structures.instance import Instance
 from DatasetTools.structures.mask import Mask
+from DatasetTools.utils.utils import path_or_str
 
 from .base_parser import BaseParser
 
@@ -19,50 +20,74 @@ class COCODataset(BaseParser):
     """Parse a COCO dataset from a .json file.
     """
 
-    def __init__(self, cfg: DictConfig, images_path, annotations_path):
+    def __init__(
+        self,
+        cfg: DictConfig,
+        annotations_path: path_or_str,
+        images_path: Optional[path_or_str] = None,
+        image_list: Optional[Union[path_or_str, List[path_or_str]]] = None
+    ):
+        """Create a COCO dataset parser.
+
+        Args:
+            cfg (DictConfig): A configuration object.
+            annotations_path (path_or_str): Dataset JSON file.
+            images_path (Optional[path_or_str], optional): Dataset images path.
+            image_list (Union[path_or_str, List[path_or_str]], optional):
+                A list or a file with a list of image or annotation file names
+                to process.
+        """
         self.cfg = cfg
         self.images_path = images_path
         self.annotations_path = annotations_path
+        
         self._images: List[Image] = []
+        self._meta: Dict[str, any] = {}
+        self._categories: Dict[int, str] = {}
+        self._super_categories: Dict[int, str] = {}
+
+        if image_list is not None:
+            if isinstance(image_list, (Path, str)):
+                self.only_image_list = [
+                    Path(i.strip()).stem
+                    for i in Path(image_list).read_text().splitlines()
+                ]
+            else:
+                self.only_image_list = [Path(i).stem for i in image_list]
+        else:
+            self.only_image_list = None
 
     def load(self):
         """Parse and load a COCO dataset.
         """
         # Read dataset annotations
-        dataset_path = self.cfg.dataset.annotations_path
-        if not dataset_path:
-            raise ValueError(f"Invalid dataset path "
-                             f"(dataset.annotations_path: '{dataset_path}')")
-        with open(dataset_path, "r") as f:
-            data = json.load(f)
+        try:
+            with open(self.annotations_path, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.exception(f"Error reading the annotations file "
+                             f"{self.annotations_path}")
 
-        # List dataset images
-        if self.cfg.dataset.images_path:
-            images_path = Path(self.cfg.dataset.images_path)
-        else:
-            images_path = None
-
-        # Save the info into the cfg
-        # if "info" in data:
-        #     self.cfg.dataset.meta = data["info"]
+        # Save the info and licenses data
+        if "info" in data:
+            self._meta["info"] = data["info"]
+        if "licenses" in data:
+            self._meta["licenses"] = data["licenses"]
 
         # Parse categories
-        categories = {}
         for cat in data["categories"]:
-            if cat["id"] in categories:
+            if cat["id"] in self._categories:
                 logger.error(f"Duplicated category ID: {cat['id']}")
-            categories[cat["id"]] = {
-                "name": cat["name"],
-                "supercategory": cat["supercategory"]
-            }
-        # self.cfg.dataset.labels = {k: v["name"] for k, v in categories.items()}
+            self._categories[cat["id"]] = cat["name"]
+            self._super_categories[cat["id"]] = cat["supercategory"]
 
         # Parse images
         images = {}
+        discard_img_id = []
         for image_data in data["images"]:
             image_path = image_data["file_name"]
-            if images_path is not None:
-                image_path = images_path / image_path
+            if self.images_path is not None:
+                image_path = self.images_path / image_path
             meta = {
                 k: image_data[k] for k in set(image_data.keys()).difference({
                     "width", "height", "id", "file_name"
@@ -77,11 +102,16 @@ class COCODataset(BaseParser):
             )
             if image_data["id"] in images:
                 logger.error(f"Duplicated image ID: {image_data['id']}")
-
-            images[image_data["id"]] = image
+            if (self.only_image_list is None or
+                image.path.stem in self.only_image_list):
+                images[image_data["id"]] = image
+            else:
+                discard_img_id.append(image_data["id"])
 
         # Parse annotations
         for annot in data["annotations"]:
+            if annot["image_id"] in discard_img_id:
+                continue
             if "bbox" in annot:
                 box = bounding_box.BoundingBoxX1Y1WH(
                     annot["bbox"][0],
@@ -94,7 +124,7 @@ class COCODataset(BaseParser):
                 box = None
             if "category_id" in annot:
                 cat_id = annot["category_id"]
-                label = categories[cat_id]["name"]
+                label = self._categories[cat_id]
             else:
                 cat_id = None
                 label = None
@@ -121,9 +151,10 @@ class COCODataset(BaseParser):
             if annot["image_id"] in images:
                 images[annot["image_id"]].annotations.append(instance)
             else:
-                logger.warning(f"Image ID ({annot['image_id']}) not found for "
-                               f"annotation: {annot['id']}")
+                logger.warning(f"Image ID ({annot['image_id']}) not found "
+                               f"for annotation: {annot['id']}")
 
+        # TODO: sort
         self._images = list(images.values())
 
         non_annot = [i for i in self._images if not i.annotations]
@@ -131,6 +162,7 @@ class COCODataset(BaseParser):
             logger.warning(f"Found ({len(non_annot)}) images with no "
                            f"annotation: {[i.id for i in non_annot]}")
 
+    # TODO properties
     def images(self) -> List[Image]:
         """Get a list with the images of the dataset
         """
