@@ -9,6 +9,7 @@ from DatasetTools.structures import bounding_box
 from DatasetTools.structures.image import Image
 from DatasetTools.structures.instance import Instance
 from DatasetTools.structures.mask import Mask
+from DatasetTools.structures.sample import Sample
 from DatasetTools.utils.utils import path_or_str
 
 from .base_parser import BaseParser
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class COCODataset(BaseParser):
-    """Parse a COCO dataset from a .json file.
+    """Parse a COCO dataset from a JSON file.
     """
 
     def __init__(
@@ -42,6 +43,7 @@ class COCODataset(BaseParser):
         self.annotations_path = Path(annotations_path)
         
         self._images: List[Image] = []
+        self._samples: List[Sample] = []
         self._meta: Dict[str, any] = {}
         self._categories: Dict[int, str] = {}
         self._super_categories: Dict[int, str] = {}
@@ -83,7 +85,7 @@ class COCODataset(BaseParser):
 
         # Parse images
         images = {}
-        discard_img_id = []
+        discard_img_id = set()
         for image_data in data["images"]:
             image_path = image_data["file_name"]
             if self.images_path is not None:
@@ -106,9 +108,10 @@ class COCODataset(BaseParser):
                 image.path.stem in self.only_image_list):
                 images[image_data["id"]] = image
             else:
-                discard_img_id.append(image_data["id"])
+                discard_img_id.add(image_data["id"])
 
         # Parse annotations
+        annotations = {}
         for annot in data["annotations"]:
             if annot["image_id"] in discard_img_id:
                 continue
@@ -148,22 +151,33 @@ class COCODataset(BaseParser):
                 extras=extras
             )
 
-            if annot["image_id"] in images:
-                images[annot["image_id"]].annotations.append(instance)
-            else:
-                logger.warning(f"Image ID ({annot['image_id']}) not found "
-                               f"for annotation: {annot['id']}")
+            annotations.setdefault(["image_id"], []).append(instance)
+            
+        # Create samples
+        for image_id in sorted(list(annotations.keys())):
+            annots = annotations[image_id]
+            if image_id not in images:
+                logger.warning(f"Image ID ({image_id}) not found for "
+                               f"annotations: {[i.id for i in annots]}")
+            sample = Sample(
+                image=images.get(image_id, None),
+                annotations=annots
+            )
+            self._samples.append(sample)
 
-        # TODO: sort
-        self._images = list(images.values())
-
-        non_annot = [i for i in self._images if not i.annotations]
+        non_annot = set(images.keys()) - set(annotations.keys())
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "
                            f"annotation: {[i.id for i in non_annot]}")
 
-    # TODO properties
-    def images(self) -> List[Image]:
-        """Get a list with the images of the dataset
-        """
-        return self._images
+    @property
+    def meta(self) -> dict:
+        return self._meta
+
+    @property
+    def samples(self) -> List[Sample]:
+        return self._samples
+    
+    @property
+    def labels(self) -> dict:
+        return self._categories
