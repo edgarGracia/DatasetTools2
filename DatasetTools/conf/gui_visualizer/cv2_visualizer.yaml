@@ -1,0 +1,4 @@
+_target_: DatasetTools.visualization.cv2_visualizer.cv2_visualizer
+window_name: "Visualization"
+width: null
+height: null

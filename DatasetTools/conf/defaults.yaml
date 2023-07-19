@@ -1,6 +1,7 @@
 defaults:
   - _self_
   - visualization
+  - gui_visualizer: matplotlib_visualizer
   - task: null
   - dataset: coco
   - override hydra/job_logging: colorlog

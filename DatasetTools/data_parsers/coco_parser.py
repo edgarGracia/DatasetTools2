@@ -38,8 +38,8 @@ class COCODataset(BaseParser):
                 to process.
         """
         self.cfg = cfg
-        self.images_path = images_path
-        self.annotations_path = annotations_path
+        self.images_path = Path(images_path)
+        self.annotations_path = Path(annotations_path)
         
         self._images: List[Image] = []
         self._meta: Dict[str, any] = {}

@@ -2,5 +2,3 @@ _target_: DatasetTools.tasks.visualization.Visualization
 output_path: null
 ext: .png
 show: True
-gui_visualizers:
-  _target_: DatasetTools.visualization.matplotlib_visualizer.matplotlib_visualizer

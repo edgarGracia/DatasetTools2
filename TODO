@@ -3,3 +3,4 @@ Parser list of image/annotations?
 Run only from cfg
 draw text alpha
 Save cfg arg
+Create a sample class to aggregate the annotations and images (and possible more) instead of storing it in image

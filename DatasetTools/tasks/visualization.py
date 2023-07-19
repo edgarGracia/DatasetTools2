@@ -25,7 +25,6 @@ class Visualization(BaseTask):
         cfg: DictConfig,
         output_path: path_or_str,
         show: bool,
-        gui_visualizers: str,
         ext: str = ".png"
     ):
         """Create a visualization task object.
@@ -34,14 +33,12 @@ class Visualization(BaseTask):
             cfg (DictConfig): A configuration object.
             output_path (path_or_str): Output images folder.
             show (bool): Show the images in a GUI.
-            gui_visualizers (str): Name of the GUI visualizer.
             ext (str, optional): Image extension. Defaults to ".png".
         """
         super().__init__(cfg)
         self.cfg = cfg
         self.output_path = output_path
         self.show = show
-        self.gui_visualizers = gui_visualizers
         self.ext = ext
 
     def run(self, parser: Type[BaseParser]):
@@ -51,7 +48,7 @@ class Visualization(BaseTask):
             parser (Type[BaseParser]): A loaded data parser.
         """
         if self.show:
-            visualizer = instantiate(self.gui_visualizers)
+            visualizer = instantiate(self.cfg.gui_visualizer)
 
         if self.output_path is not None:
             output_path = Path(self.output_path)
