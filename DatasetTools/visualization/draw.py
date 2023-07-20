@@ -5,9 +5,11 @@ import numpy as np
 import seaborn as sns
 from omegaconf import DictConfig
 
-from DatasetTools.structures import ColorSource, RelativePosition, bounding_box, CoordinatesType
+from DatasetTools.structures import (ColorSource, CoordinatesType,
+                                     RelativePosition, bounding_box)
 from DatasetTools.structures.image import Image
 from DatasetTools.structures.instance import Instance
+from DatasetTools.structures.sample import Sample
 from DatasetTools.utils import image_utils
 from DatasetTools.utils.image_utils import read_image
 
@@ -422,7 +424,7 @@ def get_image(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
     raise ValueError("Cannot determine the image size")
 
 
-def draw_image_annotations(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
+def draw_image_annotations(cfg: DictConfig, sample: Sample) -> np.ndarray:
     """Draw the annotations of an Image object.
 
     Args:
@@ -432,7 +434,7 @@ def draw_image_annotations(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
     Returns:
         np.ndarray: An image with the annotations drawn.
     """
-    image = get_image(cfg, dataset_image)
+    image = get_image(cfg, sample.image)
 
     image, fx, fy = image_utils.resize_image(
         image,
@@ -440,7 +442,7 @@ def draw_image_annotations(cfg: DictConfig, dataset_image: Image) -> np.ndarray:
         cfg.visualization.img_height
     )
 
-    annotations = dataset_image.annotations
+    annotations = sample.annotations
     for annot in annotations:
         draw_instance(cfg, image, annot, (fx, fy))
 

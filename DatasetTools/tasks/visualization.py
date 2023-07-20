@@ -56,12 +56,15 @@ class Visualization(BaseTask):
         else:
             output_path = None
 
-        print("Press ctrl+c to stop")
         try:
-            for image in tqdm(parser.images(), unit="img"):
-                vis_image = draw_image_annotations(self.cfg, image)
+            pbar = tqdm(parser.samples, unit="img")
+            for sample in pbar:
+                pbar.set_description(
+                    f"{sample.image.path.name} ({sample.image.id})")
+                vis_image = draw_image_annotations(self.cfg, sample)
                 if output_path is not None:
-                    self._write_image(output_path, image.path, vis_image)
+                    self._write_image(
+                        output_path, sample.image.path, vis_image)
                 if visualizer:
                     visualizer.show(vis_image, image_mode="BGR")
         except KeyboardInterrupt:

@@ -42,7 +42,6 @@ class COCODataset(BaseParser):
         self.images_path = Path(images_path)
         self.annotations_path = Path(annotations_path)
         
-        self._images: List[Image] = []
         self._samples: List[Sample] = []
         self._meta: Dict[str, any] = {}
         self._categories: Dict[int, str] = {}
@@ -50,14 +49,14 @@ class COCODataset(BaseParser):
 
         if image_list is not None:
             if isinstance(image_list, (Path, str)):
-                self.only_image_list = [
+                self._only_image_list = [
                     Path(i.strip()).stem
                     for i in Path(image_list).read_text().splitlines()
                 ]
             else:
-                self.only_image_list = [Path(i).stem for i in image_list]
+                self._only_image_list = [Path(i).stem for i in image_list]
         else:
-            self.only_image_list = None
+            self._only_image_list = None
 
     def load(self):
         """Parse and load a COCO dataset.
@@ -104,8 +103,8 @@ class COCODataset(BaseParser):
             )
             if image_data["id"] in images:
                 logger.error(f"Duplicated image ID: {image_data['id']}")
-            if (self.only_image_list is None or
-                image.path.stem in self.only_image_list):
+            if (self._only_image_list is None or
+                image.path.stem in self._only_image_list):
                 images[image_data["id"]] = image
             else:
                 discard_img_id.add(image_data["id"])
@@ -151,7 +150,7 @@ class COCODataset(BaseParser):
                 extras=extras
             )
 
-            annotations.setdefault(["image_id"], []).append(instance)
+            annotations.setdefault(annot["image_id"], []).append(instance)
             
         # Create samples
         for image_id in sorted(list(annotations.keys())):
@@ -168,7 +167,7 @@ class COCODataset(BaseParser):
         non_annot = set(images.keys()) - set(annotations.keys())
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "
-                           f"annotation: {[i.id for i in non_annot]}")
+                           f"annotation: {non_annot}")
 
     @property
     def meta(self) -> dict:
