@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
+import cv2
 import numpy as np
-import pycocotools.mask as COCOMask
+import pycocotools.mask as maskUtils
 
 
 class Mask:
@@ -30,77 +31,82 @@ class Mask:
         self._height = height
         self._area = area
 
-    def numpy_mask(self, save: bool = True) -> np.ndarray:
-        """Get the mask as a numpy array.
+    def _decode_rle(self, rle: Union[list, dict]) -> np.ndarray:
+        # Parse rle/points
+        if isinstance(rle, list):
+            # List of points
+            rle = maskUtils.frPyObjects(rle, self._height, self._width)
+            rle = maskUtils.merge(rle)
+        elif isinstance(rle["counts"], list):
+            # uncompressed elw
+            rle = maskUtils.frPyObjects(rle, self._height, self._width)
+        return maskUtils.decode(rle)
 
-        Args:
-            save (bool, optional): If the mask is stored as an RLE, save the
-                converted numpy mask to speed-up future calls. Defaults to True.
+    def numpy_mask(self) -> np.ndarray:
+        """Get the mask as a numpy array.
 
         Returns:
             np.ndarray: A numpy mask of shape (H, W) of type ``bool``.
         """
         # TODO: check shape and type!
         if self._mask is None:
-            mask = np.asfortranarray(COCOMask.decode(self._rle).astype(bool))
-            if save:
-                self._mask = mask
-            return mask
+            mask = np.asfortranarray(self._decode_rle(self._rle).astype(bool))
+            self._mask = mask
         return self._mask
 
-    def rle(self, save: bool = True) -> dict:
+    def rle(self) -> dict:
         """Get the mask an RLE.
-
-        Args:
-            save (bool, optional): If the mask is stored as a numpy array,
-                save the generated RLE to speed-up future calls.
-                Defaults to True.
 
         Returns:
             dict: The RLE
         """
         # TODO: Check return
         if self._rle is None:
-            rle = COCOMask.encode(self._mask)
-            if save:
-                self._rle = rle
-            return rle
+            rle = maskUtils.encode(self._mask)
+            self._rle = rle
         return self._rle
 
     def height(self) -> int:
         """Get the height of the mask.
         """
         # TODO: Test
-        if self._height is not None:
-            return self._height
-        if self._rle is not None:
-            height = self._rle["size"][1]
-        else:
-            height = self._mask.shape[0]
-        self._height = height
-        return height
+        if self._height is None:
+            if self._mask is None:
+                self.numpy_mask()
+            self.height = self._mask.shape[0]
+        return self._height
 
     def width(self) -> int:
         """Get the width of the mask.
         """
         # TODO: Test
-        if self._width is not None:
-            return self._width
-        if self._rle is not None:
-            width = self._rle["size"][0]
-        else:
-            width = self._mask.shape[1]
-        self._width = width
-        return width
+        if self._width is None:
+            if self._mask is None:
+                self.numpy_mask()
+            self.width = self._mask.shape[1]
+        return self._width
 
     def area(self) -> int:
         """Get the area of the mask.
         """
-        if self._area is not None:
-            return self._area
-        if self._rle is not None:
-            area = COCOMask.area(self._rle)
-        else:
-            area = np.count_nonzero(self._mask)
-        self._area = area
-        return area
+        # TODO: Check
+        if self._area is None:
+            if self._mask is None:
+                self.numpy_mask()
+            self._area = np.count_nonzero(self._mask)
+        return self._area
+
+    def resize(self, width: int, height: int) -> Mask:
+        """Resize the mask.
+
+        Args:
+            width (int): Target mask width.
+            height (int): Target mask height.
+
+        Returns:
+            Mask: A resized Mask.
+        """
+        if width != self.width() or height != self.height:
+            mask = cv2.resize(self.numpy_mask().astype("uint8"), (width, height))
+            return Mask(mask=mask.astype("bool"))
+        return self

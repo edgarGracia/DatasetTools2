@@ -9,6 +9,7 @@ from DatasetTools.structures import (ColorSource, CoordinatesType,
                                      RelativePosition, bounding_box)
 from DatasetTools.structures.image import Image
 from DatasetTools.structures.instance import Instance
+from DatasetTools.structures.mask import Mask
 from DatasetTools.structures.sample import Sample
 from DatasetTools.utils import image_utils
 from DatasetTools.utils.image_utils import read_image
@@ -318,6 +319,23 @@ def draw_instance(
         np.ndarray: The image with the instance's data data drawn.
     """
     box = instance.bounding_box
+    mask = instance.mask
+
+    # Draw segmentation mask
+    if mask is not None and cfg.visualization.mask.visible:
+        mask = mask.resize(image.shape[1], image.shape[0])
+        mask_color = get_color(
+            color_source=cfg.visualization.mask.color_source,
+            color=cfg.visualization.mask.color,
+            palette=cfg.visualization.mask.palette,
+            instance=instance,
+        )
+        draw_mask(
+            image=image,
+            mask=mask,
+            color=mask_color,
+            alpha=cfg.visualization.mask.alpha
+        )
 
     # Draw bounding box
     if box is not None:
@@ -449,50 +467,29 @@ def draw_image_annotations(cfg: DictConfig, sample: Sample) -> np.ndarray:
     return image
 
 
-# def draw_mask(
-#     image: np.ndarray,
-#     mask: SegmentationMask,
-#     color: Optional[Tuple[int, int, int]] = (0, 0, 255),
-#     alpha: float = 0.5,
-#     color_by_label: bool = False,
-#     label_id: Optional[int] = None,
-#     colors_list: Optional[List[Tuple[int, int, int]]] = None
-# ) -> np.ndarray:
-#     """Draw a segmentation mask on an image.
+def draw_mask(
+    image: np.ndarray,
+    mask: Mask,
+    color: Tuple[int, int, int] = (255, 255, 255),
+    alpha: float = 0.5
+) -> np.ndarray:
+    """Draw a segmentation mask on an image.
 
-#     Args:
-#         image (np.ndarray): A BGR uint8 image of shape (H, W, 3).
-#         mask (SegmentationMask): A SegmentationMask object.
-#         color (Optional[Tuple[int, int, int]]): Color of the mask.
-#             Defaults to (0,0,255).
-#         alpha (float, optional): Transparency of the mask, where
-#             1.0 is completely opaque and 0 is transparent. Defaults to 0.5.
-#         color_by_label (bool, optional): Set the mask color by its ``label_id``.
-#             Defaults to False.
-#         label_id (Optional[int], optional): label id associated with the mask;
-#             used to chose the color. Defaults to None.
-#         colors_list (Optional[List[Tuple[int, int, int]]], optional): Custom
-#             list of colors to chose when ``color_by_label`` is set to True.
-#             If it is None, a seaborn palette is used. Defaults to None.
+    Args:
+        image (np.ndarray): The source image where draw the text.
+        mask (Mask): A Mask object.
+        color (Tuple[int, int, int], optional): Color of the box.
+            Defaults to (255, 255, 255).
+        alpha (float, optional): Opacity of the box. Defaults to 1.
 
-#     Returns:
-#         np.ndarray: The image with the plotted mask.
-#     """
-#     mask = mask.mask
-#     mask_pixels = image[mask]
-
-#     if color_by_label:
-#         if colors_list is None:
-#             color = sns.color_palette(None, label_id+1)[label_id]
-#             color_mask = np.full_like(mask_pixels, [int(i*255) for i in color])
-#         else:
-#             color_mask = np.full_like(mask_pixels, colors_list[label_id])
-#     else:
-#         color_mask = np.full_like(mask_pixels, color)
-
-#     image[mask] = cv2.addWeighted(mask_pixels, 1-alpha, color_mask, alpha, 0)
-
-#     return image
+    Returns:
+        np.ndarray: The source image with the mask drawn.
+    """
+    mask = mask.numpy_mask()
+    mask_pixels = image[mask>0]
+    color_mask = np.full_like(mask_pixels, color)
+    image[mask] = cv2.addWeighted(mask_pixels, 1-alpha, color_mask, alpha, 0)
+    return image
 
 
 # def draw_coco_keypoints(

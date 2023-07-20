@@ -65,7 +65,7 @@ class Visualization(BaseTask):
                 if output_path is not None:
                     self._write_image(
                         output_path, sample.image.path, vis_image)
-                if visualizer:
+                if self.show:
                     visualizer.show(vis_image, image_mode="BGR")
         except KeyboardInterrupt:
             pass

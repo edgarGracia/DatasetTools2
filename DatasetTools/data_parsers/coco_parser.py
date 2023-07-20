@@ -112,7 +112,8 @@ class COCODataset(BaseParser):
         # Parse annotations
         annotations = {}
         for annot in data["annotations"]:
-            if annot["image_id"] in discard_img_id:
+            image_id = annot["image_id"]
+            if image_id in discard_img_id:
                 continue
             if "bbox" in annot:
                 box = bounding_box.BoundingBoxX1Y1WH(
@@ -131,7 +132,11 @@ class COCODataset(BaseParser):
                 cat_id = None
                 label = None
             if "segmentation" in annot:
-                mask = Mask(rle=annot["segmentation"])
+                mask = Mask(
+                    rle=annot["segmentation"],
+                    width=images.get(image_id, {}).width,
+                    height=images.get(image_id, {}).height
+                )
             else:
                 mask = None
 
@@ -150,7 +155,7 @@ class COCODataset(BaseParser):
                 extras=extras
             )
 
-            annotations.setdefault(annot["image_id"], []).append(instance)
+            annotations.setdefault(image_id, []).append(instance)
             
         # Create samples
         for image_id in sorted(list(annotations.keys())):
