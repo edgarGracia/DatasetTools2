@@ -21,6 +21,7 @@ class COCODataset(BaseParser):
     """Parse a COCO dataset from a JSON file.
     """
 
+    # TODO: Save labels to base class
     def __init__(
         self,
         cfg: DictConfig,
@@ -173,6 +174,59 @@ class COCODataset(BaseParser):
         if non_annot:
             logger.warning(f"Found ({len(non_annot)}) images with no "
                            f"annotation: {non_annot}")
+
+    def save(self, samples: List[Sample], output_path: path_or_str):
+        """Save a COCO dataset.
+
+        Args:
+            samples (List[Sample]): Samples to save.
+            output_path (path_or_str): Output file.
+        """
+        output_path.mkdir(exist_ok=True, parents=True)
+        dataset_dict = {}
+
+        # Set meta
+        dataset_dict.update(self._meta)
+        
+        # Set categories
+        dataset_dict["categories"] = []
+        for cat_id, cat_name in self._categories.items():
+            cat_dict =  {"id": cat_id, "name": cat_name}
+            if cat_id in self._super_categories:
+                cat_dict["supercategory"] = self._super_categories[cat_id]
+            dataset_dict["categories"].append(cat_dict)
+        
+        dataset_dict["images"] = []
+        dataset_dict["annotations"] = []
+        for sample in samples:
+            # Set image
+            image = sample.image
+            image_dict = {
+                "id": image.id,
+                "file_name": str(image.path),
+                "width": image.width,
+                "height": image.height,
+            }
+            if image.meta:
+                image_dict.update(image.meta)
+            dataset_dict["images"].append(image_dict)
+
+            # Set annots
+            annotations = sample.annotations
+            for annot in annotations:
+                annot_dict = {
+                    "id": annot.id,
+                    "image_id": image.id,
+                    "category_id": annot.label_id,
+                    "bbox": annot.bounding_box.numpy.to_list(),
+                    "segmentation": annot.mask.rle()
+                }
+                annot_dict.update(annot.extras)
+                dataset_dict["annotations"].append(annot_dict)
+        
+        # Save dataset
+        with open(output_path, "w") as f:
+            json.dump(dataset_dict, f)
 
     @property
     def meta(self) -> dict:
