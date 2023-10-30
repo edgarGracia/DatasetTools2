@@ -182,7 +182,7 @@ class COCODataset(BaseParser):
             samples (List[Sample]): Samples to save.
             output_path (path_or_str): Output file.
         """
-        output_path.mkdir(exist_ok=True, parents=True)
+        output_path.parent.mkdir(exist_ok=True, parents=True)
         dataset_dict = {}
 
         # Set meta
@@ -218,7 +218,7 @@ class COCODataset(BaseParser):
                     "id": annot.id,
                     "image_id": image.id,
                     "category_id": annot.label_id,
-                    "bbox": annot.bounding_box.numpy.to_list(),
+                    "bbox": annot.bounding_box.numpy.tolist(),
                     "segmentation": annot.mask.rle()
                 }
                 annot_dict.update(annot.extras)
@@ -226,7 +226,7 @@ class COCODataset(BaseParser):
         
         # Save dataset
         with open(output_path, "w") as f:
-            json.dump(dataset_dict, f)
+            json.dump(dataset_dict, f, indent=4)
 
     @property
     def meta(self) -> dict:

@@ -1,0 +1,6 @@
+_target_: DatasetTools.tasks.split_dataset.SplitDataset
+train_split: 0.6
+val_split: 0.2
+test_split: 0.2
+output_path: null
+shuffle: True

@@ -19,7 +19,8 @@ from .base_task import BaseTask
 class SplitDataset(BaseTask):
     """Split the dataset samples into train, val, test.
     """
-
+    
+    # TODO: Test
     def __init__(
         self,
         cfg: DictConfig,
@@ -44,8 +45,15 @@ class SplitDataset(BaseTask):
         self.train_split = train_split
         self.val_split = val_split
         self.test_split = test_split
-        self.output_path = output_path
+        self.output_path = Path(output_path)
         self.shuffle = shuffle
+
+        if output_path is None:
+            raise ValueError("output_path can not be None")
+        
+        if train_split + val_split + test_split > 1:
+            raise ValueError(f"Splits must add up to 1 "
+                             f"({train_split, val_split, test_split})")
 
     def run(self, parser: Type[BaseParser]):
         """Run the task.
@@ -67,6 +75,17 @@ class SplitDataset(BaseTask):
         train_samples = parser.samples[i_train:]
         val_samples = parser.samples[i_train:i_val]
         test_samples = parser.samples[i_val:i_test]
+
+        print(f"Train samples:\t{len(train_samples)}")
+        print(f"Val samples:\t{len(val_samples)}")
+        print(f"Test samples:\t{len(test_samples)}")
+
+        if train_samples:
+            parser.save(train_samples, self.output_path / "train.json")
+        if val_samples:
+            parser.save(val_samples, self.output_path / "val.json")
+        if test_samples:
+            parser.save(test_samples, self.output_path / "test.json")
 
 
     def _write_image(

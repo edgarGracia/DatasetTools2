@@ -2,10 +2,13 @@ from typing import Type
 
 from omegaconf import DictConfig
 
-from .visualization import BaseTask, Visualization
+from .base_task import BaseTask
+from .visualization import Visualization
+from .split_dataset import SplitDataset
 
 tasks = {
-    "visualization": Visualization
+    "visualization": Visualization,
+    "split_dataset": SplitDataset,
 }
 
 def create_task(cfg: DictConfig) -> Type[BaseTask]:
